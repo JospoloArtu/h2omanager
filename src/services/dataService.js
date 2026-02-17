@@ -123,6 +123,55 @@ const rutasService = {
   },
 }
 
+// Servicio de Ventas
+const ventasService = {
+  // Obtener todas las ventas
+  getAll: async (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString()
+    return api.get(`/ventas${queryParams ? `?${queryParams}` : ''}`)
+  },
+
+  // Obtener venta por ID
+  getById: async (id) => {
+    return api.get(`/ventas/${id}`)
+  },
+
+  // Crear nueva venta
+  create: async (ventaData) => {
+    return api.post('/ventas', ventaData)
+  },
+
+  // Actualizar venta
+  update: async (id, ventaData) => {
+    return api.put(`/ventas/${id}`, ventaData)
+  },
+
+  // Eliminar venta
+  delete: async (id) => {
+    return api.delete(`/ventas/${id}`)
+  },
+
+  // Obtener ventas del día
+  getVentasHoy: async () => {
+    return api.get('/ventas/hoy')
+  },
+
+  // Obtener ventas por cliente
+  getByCliente: async (clienteId) => {
+    return api.get(`/ventas/cliente/${clienteId}`)
+  },
+
+  // Obtener ventas por rango de fechas
+  getByRangoFechas: async (fechaInicio, fechaFin) => {
+    return api.get(`/ventas/rango?inicio=${fechaInicio}&fin=${fechaFin}`)
+  },
+
+  // Obtener estadísticas de ventas
+  getEstadisticas: async (periodo = 'mes') => {
+    return api.get(`/ventas/estadisticas?periodo=${periodo}`)
+  },
+}
+
 // Servicio del Dashboard
 const dashboardService = {
   // Obtener estadísticas del dashboard
@@ -141,5 +190,6 @@ export {
   botoellonesService,
   entregasService,
   rutasService,
+  ventasService,
   dashboardService,
 }

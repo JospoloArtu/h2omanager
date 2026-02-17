@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ConfigProvider } from './context/ConfigContext'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import Configuracion from './pages/Configuracion'
+import Clientes from './pages/Clientes'
+import Ventas from './pages/Ventas'
 import './styles/App.css'
 
 // Contenido principal de la aplicación (usa el contexto de autenticación)
@@ -39,13 +42,13 @@ function AppContent() {
       case 'dashboard':
         return <Dashboard />
       case 'clientes':
-        return <PlaceholderPage title="Gestión de Clientes" />
+        return <Clientes />
       case 'botellones':
         return <PlaceholderPage title="Inventario de Botellones" />
       case 'entregas':
         return <PlaceholderPage title="Control de Entregas" />
       case 'ventas':
-        return <PlaceholderPage title="Gestión de Ventas" />
+        return <Ventas />
       case 'proveedores':
         return <PlaceholderPage title="Gestión de Proveedores" />
       case 'servicios':
@@ -83,38 +86,41 @@ function AppContent() {
   )
 }
 
-// Aplicación raíz con proveedores de contexto
+// App principal con providers
 function App() {
   return (
-    <AuthProvider>
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#fff',
-            color: '#1e293b',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-            borderRadius: '12px',
-            padding: '16px 20px',
-          },
-          success: {
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
+    <ConfigProvider>
+      <AuthProvider>
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#fff',
+              color: '#1e293b',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+              borderRadius: '12px',
+              padding: '16px 20px',
             },
-          },
-          error: {
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
+            success: {
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
             },
-          },
-        }}
-      />
-      <AppContent />
-    </AuthProvider>
+            error: {
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+        <AppContent />
+      </AuthProvider>
+    </ConfigProvider>
   )
 }
 
 export default App
+
