@@ -9,6 +9,7 @@ import Login from './pages/Login'
 import Configuracion from './pages/Configuracion'
 import Clientes from './pages/Clientes'
 import Ventas from './pages/Ventas'
+import Inventario from './pages/Inventario'
 import './styles/App.css'
 
 // Contenido principal de la aplicación (usa el contexto de autenticación)
@@ -49,6 +50,8 @@ function AppContent() {
         return <PlaceholderPage title="Control de Entregas" />
       case 'ventas':
         return <Ventas />
+      case 'inventario':
+        return <Inventario />
       case 'proveedores':
         return <PlaceholderPage title="Gestión de Proveedores" />
       case 'servicios':

@@ -20,6 +20,7 @@ function Sidebar({ isOpen, currentPage, setCurrentPage }) {
     { id: 'botellones', icon: FiPackage, label: 'Botellones' },
     { id: 'entregas', icon: FiTruck, label: 'Entregas' },
     { id: 'ventas', icon: FiShoppingCart, label: 'Ventas' },
+    { id: 'inventario', icon: FiPackage, label: 'Inventario' },
     { id: 'proveedores', icon: FiUserCheck, label: 'Proveedores' },
     { id: 'servicios', icon: FiTool, label: 'Servicios' },
     { id: 'rutas', icon: FiMap, label: 'Rutas' },

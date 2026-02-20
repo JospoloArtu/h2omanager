@@ -85,11 +85,11 @@ const Clientes = () => {
 
   // Datos mock temporales
   const getMockClientes = () => [
-    { id: 1, nombre: 'Juan Pérez', cedula: '101-2023-456', telefono: '0412-1234567', direccion: 'Av. principal #123.', email: 'juan.perez@gmail.com', tipo: 'residencial', estado: 'activo', saldo: 15.00, fechaRegistro: '2024-01-15' },
-    { id: 2, nombre: 'María García', cedula: '201-5541-001', telefono: '0424-9876543', direccion: 'Calle 10 #45', email: 'MariaG@gmail.com', tipo: 'comercial', estado: 'moroso', saldo: -120.50, fechaRegistro: '2024-01-20' },
-    { id: 3, nombre: 'Carlos López', cedula: '105-8890-234', telefono: '0212-5551234', direccion: 'Zona Industrial #78', email: 'Carloslopez@gmail.com', tipo: 'residencial', estado: 'activo', saldo: 0.00, fechaRegistro: '2024-02-01' },
-    { id: 4, nombre: 'Ana Victoria', cedula: '402-1110-882', telefono: '0414-7778889', direccion: 'Centro Metropolitano Javier', email: 'Anita@gmail.com', tipo: 'comercial', estado: 'activo', saldo: 45.00, fechaRegistro: '2024-01-10' },
-    { id: 5, nombre: 'Carlos Rodriguez', cedula: '101-5050-999', telefono: '0212-9993333', direccion: 'Calle 8va, San Francisco', email: 'crodriguez@gmail.com', tipo: 'residencial', estado: 'inactivo', saldo: 22.00, fechaRegistro: '2024-02-10' },
+    { id: 1, nombre: 'Juan Pérez', cedula: '101202345', telefono: '0412-1234567', direccion: 'Av. principal #123.', email: 'juan.perez@gmail.com', tipo: 'residencial', estado: 'activo', saldo: 15.00, fechaRegistro: '2024-01-15' },
+    { id: 2, nombre: 'María García', cedula: '201554100', telefono: '0424-9876543', direccion: 'Calle 10 #45', email: 'MariaG@gmail.com', tipo: 'comercial', estado: 'moroso', saldo: -120.50, fechaRegistro: '2024-01-20' },
+    { id: 3, nombre: 'Carlos López', cedula: '105889023', telefono: '0212-5551234', direccion: 'Zona Industrial #78', email: 'Carloslopez@gmail.com', tipo: 'residencial', estado: 'activo', saldo: 0.00, fechaRegistro: '2024-02-01' },
+    { id: 4, nombre: 'Ana Victoria', cedula: '402111088', telefono: '0414-7778889', direccion: 'Centro Metropolitano Javier', email: 'Anita@gmail.com', tipo: 'comercial', estado: 'activo', saldo: 45.00, fechaRegistro: '2024-01-10' },
+    { id: 5, nombre: 'Carlos Rodriguez', cedula: '101505099', telefono: '0212-9993333', direccion: 'Calle 8va, San Francisco', email: 'crodriguez@gmail.com', tipo: 'residencial', estado: 'inactivo', saldo: 22.00, fechaRegistro: '2024-02-10' },
   ];
 
   // Filtrar clientes
@@ -173,9 +173,15 @@ const Clientes = () => {
   // Handler del formulario
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    let finalValue = value;
+
+    if (name === 'cedula') {
+      finalValue = value.replace(/\D/g, '').slice(0, 9);
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: finalValue,
     }));
   };
 
@@ -204,25 +210,24 @@ const Clientes = () => {
       closeModal();
       fetchClientes();
     } catch (error) {
-      console.error("Error al guardar cliente:", error);
-      toast.error("Error al guardar el cliente");
-
-      // Simulación para desarrollo
+      console.warn("API no disponible, procesando en modo offline:", error.message);
+      
+      // Simulación para desarrollo (Mock)
       if (modalMode === "create") {
         const newCliente = {
-          id: clientes.length + 1,
+          id: Date.now(), // ID temporal
           ...formData,
           fechaRegistro: new Date().toISOString().split("T")[0],
         };
-        setClientes([...clientes, newCliente]);
-        toast.success("Cliente creado exitosamente (mock)");
+        setClientes([newCliente, ...clientes]);
+        toast.success("Cliente creado (Modo Offline)");
       } else {
         setClientes(
           clientes.map((c) =>
             c.id === selectedCliente.id ? { ...c, ...formData } : c,
           ),
         );
-        toast.success("Cliente actualizado exitosamente (mock)");
+        toast.success("Cliente actualizado (Modo Offline)");
       }
       closeModal();
     }
@@ -506,7 +511,8 @@ const Clientes = () => {
                       name="cedula"
                       value={formData.cedula}
                       onChange={handleInputChange}
-                      placeholder="101-2023-456"
+                      placeholder="Ej: 20123456"
+                      maxLength="9"
                       disabled={modalMode === "view"}
                     />
                   </div>

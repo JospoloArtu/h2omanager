@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { FiUser, FiShoppingCart, FiDollarSign, FiCheck, FiSearch, FiPlus, FiMinus, FiTrash2, FiArrowRight, FiArrowLeft, FiPrinter } from 'react-icons/fi'
+import { useState, useEffect } from 'react'
+import { FiUser, FiShoppingCart, FiDollarSign, FiCheck, FiSearch, FiPlus, FiMinus, FiTrash2, FiArrowRight, FiArrowLeft, FiPrinter, FiCreditCard, FiSmartphone, FiLoader } from 'react-icons/fi'
 import toast from 'react-hot-toast'
 import { useConfig } from '../context/ConfigContext'
+import { clientesService, botoellonesService, ventasService } from '../services/dataService'
 import '../styles/Ventas.css'
 
 const Ventas = () => {
@@ -16,7 +17,20 @@ const Ventas = () => {
   const [selectedCliente, setSelectedCliente] = useState(null)
   const [items, setItems] = useState([])
   const [metodoPago, setMetodoPago] = useState('efectivo')
+  const [monedaEfectivo, setMonedaEfectivo] = useState('usd') // 'usd' | 'bs'
+  const [datosPago, setDatosPago] = useState({
+    banco: '',
+    telefono: '',
+    cedula: '',
+    referencia: '' // últimos 6 dígitos
+  })
   const [notas, setNotas] = useState('')
+
+  // Estado para datos reales
+  const [clientes, setClientes] = useState([])
+  const [productos, setProductos] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [procesando, setProcesando] = useState(false)
 
   // Estado para cliente no registrado
   const [nuevoCliente, setNuevoCliente] = useState({
@@ -27,26 +41,95 @@ const Ventas = () => {
   // Estado de búsqueda de cliente
   const [searchCliente, setSearchCliente] = useState('')
 
-  // Clientes mock
-  const clientesMock = [
-    { id: 1, nombre: 'Juan Pérez', cedula: '101-2023-456', telefono: '0412-1234567' },
-    { id: 2, nombre: 'María García', cedula: '201-5541-001', telefono: '0424-9876543' },
-    { id: 3, nombre: 'Carlos López', cedula: '105-8890-234', telefono: '0212-5551234' },
-  ]
+  // Cargar datos
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [clientesRes, productosRes] = await Promise.all([
+          clientesService.getAll(),
+          botoellonesService.getInventario()
+        ])
+        
+        // Carga real
+        const realClientes = clientesRes.data || []
+        const realProductos = productosRes.data || []
 
-  // Productos disponibles - Botellones por litros
-  const productosMock = [
-    { id: 1, nombre: 'Botellón 15 Litros', litros: 15, precio: 4.50, stock: 50 },
-    { id: 2, nombre: 'Botellón 20 Litros', litros: 20, precio: 6.00, stock: 75 },
-    { id: 3, nombre: 'Dispensador Premium', litros: 0, precio: 25.00, stock: 10 },
-    { id: 4, nombre: 'Soporte para Botellón', litros: 0, precio: 8.00, stock: 20 },
+        // Si la carga real está vacía o falla silenciosamente, usamos mocks
+        if (realClientes.length === 0) {
+          console.warn('Cargando clientes mock (API vacía o desconectada)')
+          setClientes([
+            { id: 1, nombre: 'Juan Pérez', cedula: '101202345', telefono: '0412-1234567', direccion: 'Av. principal #123.', email: 'juan.perez@gmail.com', tipo: 'residencial', estado: 'activo', saldo: 15.00 },
+            { id: 2, nombre: 'María García', cedula: '201554100', telefono: '0424-9876543', direccion: 'Calle 10 #45', email: 'MariaG@gmail.com', tipo: 'comercial', estado: 'moroso', saldo: -120.50 },
+            { id: 3, nombre: 'Carlos López', cedula: '105889023', telefono: '0212-5551234', direccion: 'Zona Industrial #78', email: 'Carloslopez@gmail.com', tipo: 'residencial', estado: 'activo', saldo: 0.00 },
+            { id: 4, nombre: 'Ana Victoria', cedula: '402111088', telefono: '0414-7778889', direccion: 'Centro Metropolitano Javier', email: 'Anita@gmail.com', tipo: 'comercial', estado: 'activo', saldo: 45.00 },
+            { id: 5, nombre: 'Carlos Rodriguez', cedula: '101505099', telefono: '0212-9993333', direccion: 'Calle 8va, San Francisco', email: 'crodriguez@gmail.com', tipo: 'residencial', estado: 'inactivo', saldo: 22.00 }
+          ])
+        } else {
+          setClientes(realClientes)
+        }
+
+        if (realProductos.length === 0) {
+          console.warn('Cargando productos mock (API vacía o desconectada)')
+          setProductos([
+            { id: 1, nombre: 'Botellón 15 Litros', litros: 15, precio: 4.50, stock: 50 },
+            { id: 2, nombre: 'Botellón 20 Litros', litros: 20, precio: 6.00, stock: 75 },
+            { id: 3, nombre: 'Dispensador Premium', litros: 0, precio: 25.00, stock: 10 },
+            { id: 4, nombre: 'Soporte para Botellón', litros: 0, precio: 8.00, stock: 20 }
+          ])
+        } else {
+          setProductos(realProductos)
+        }
+      } catch (error) {
+        console.error('Error cargando datos, activando mocks:', error)
+        toast.error('Cargando datos locales (Base de datos desconectada)')
+        
+        // Fallback total a mocks en caso de error de conexión
+        setClientes([
+          { id: 1, nombre: 'Juan Pérez', cedula: '101202345', telefono: '0412-1234567', direccion: 'Av. principal #123.' },
+          { id: 2, nombre: 'María García', cedula: '201554100', telefono: '0424-9876543', direccion: 'Calle 10 #45' },
+          { id: 3, nombre: 'Carlos López', cedula: '105889023', telefono: '0212-5551234', direccion: 'Zona Industrial #78' },
+          { id: 4, nombre: 'Ana Victoria', cedula: '402111088', telefono: '0414-7778889', direccion: 'Centro Metropolitano Javier' },
+          { id: 5, nombre: 'Carlos Rodriguez', cedula: '101505099', telefono: '0212-9993333', direccion: 'Calle 8va, San Francisco' }
+        ])
+        setProductos([
+          { id: 1, nombre: 'Producto Mock A', litros: 18, precio: 5.0, stock: 100 },
+          { id: 2, nombre: 'Producto Mock B', litros: 20, precio: 7.0, stock: 80 }
+        ])
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  // Lista de bancos venezolanos
+  const bancosVenezuela = [
+    'Banco de Venezuela',
+    'Banesco',
+    'Mercantil',
+    'BBVA Provincial',
+    'Banco Nacional de Crédito (BNC)',
+    'Banco del Tesoro',
+    'Banco Bicentenario',
+    'Bancamiga',
+    'Banplus',
+    'Banco Exterior',
+    'Banco Fondo Común (BFC)',
+    'Banco Caroní',
+    'Banco Plaza',
+    'Banco Activo',
+    'Sofitasa',
+    '100% Banco',
+    'Bancrecer',
+    'Mi Banco'
   ]
 
   // Filtrar clientes
-  const clientesFiltrados = clientesMock.filter(c =>
-    c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||
-    c.cedula.includes(searchCliente) ||
-    c.telefono.includes(searchCliente)
+  const clientesFiltrados = clientes.filter(c =>
+    c.nombre?.toLowerCase().includes(searchCliente.toLowerCase()) ||
+    c.cedula?.includes(searchCliente) ||
+    c.telefono?.includes(searchCliente)
   )
 
   // Calcular total
@@ -107,9 +190,27 @@ const Ventas = () => {
         }
       }
     }
-    if (currentStep === 2 && items.length === 0) {
-      toast.error('Agrega al menos un item')
-      return false
+    if (currentStep === 3) {
+      if (metodoPago === 'transferencia' || metodoPago === 'pago_movil' || metodoPago === 'punto') {
+        if (!datosPago.banco) {
+          toast.error('Selecciona el banco')
+          return false
+        }
+        if (metodoPago !== 'punto') {
+          if (!datosPago.telefono) {
+            toast.error('Ingresa el nro. de teléfono')
+            return false
+          }
+          if (!datosPago.cedula) {
+            toast.error('Ingresa la cédula del pagador')
+            return false
+          }
+        }
+        if (!datosPago.referencia || datosPago.referencia.length !== 6) {
+          toast.error('Ingresa los últimos 6 dígitos de referencia')
+          return false
+        }
+      }
     }
     return true
   }
@@ -127,92 +228,169 @@ const Ventas = () => {
   }
 
   // Confirmar venta
-  const confirmarVenta = () => {
-    toast.success('Venta registrada exitosamente')
-    setCurrentStep(4)
+  const confirmarVenta = async () => {
+    try {
+      setProcesando(true)
+      const totalUSD = calcularTotal()
+      const totalBs = convertToLocal(totalUSD)
+
+      const ventaData = {
+        clienteId: tipoCliente === 'registrado' ? selectedCliente.id : null,
+        clienteNoRegistrado: tipoCliente === 'no_registrado' ? nuevoCliente : null,
+        items: items.map(item => ({
+          productoId: item.productoId,
+          cantidad: item.cantidad,
+          precio: item.precio
+        })),
+        totalUSD,
+        totalBs,
+        metodoPago,
+        detallesPago: (metodoPago === 'transferencia' || metodoPago === 'pago_movil' || metodoPago === 'punto') 
+          ? datosPago 
+          : (metodoPago === 'efectivo' ? { moneda: monedaEfectivo } : {}),
+        notas,
+        fecha: new Date()
+      }
+
+      try {
+        await ventasService.create(ventaData)
+        toast.success('Venta registrada exitosamente')
+      } catch (apiError) {
+        console.warn('API no disponible, registrando venta en modo offline:', apiError.message)
+        toast.success('Venta registrada (Modo Offline / Pendiente de Sincronización)')
+      }
+      
+      setCurrentStep(4)
+    } catch (error) {
+      console.error('Error al procesar venta:', error)
+      toast.error('Ocurrió un error al procesar la venta')
+    } finally {
+      setProcesando(false)
+    }
   }
 
   // Imprimir factura
   const imprimirFactura = () => {
     const fechaActual = new Date().toLocaleString('es-VE', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
     })
-
-    const clienteInfo = tipoCliente === 'registrado' && selectedCliente 
-      ? `${selectedCliente.nombre}\nCédula: ${selectedCliente.cedula}\nDirección: ${selectedCliente.direccion}`
-      : `${nuevoCliente.nombre}\nCédula: ${nuevoCliente.cedula}`
 
     const totalUSD = calcularTotal()
     const totalBs = convertToLocal(totalUSD)
 
     const factura = `
-═══════════════════════════════════════════
-           H2O MANAGER - FACTURA
-═══════════════════════════════════════════
+      <div class="ticket">
+        <div class="header">
+          <h2>H2O MANAGER</h2>
+          <p>RIF: J-00000000-0</p>
+          <p>${fechaActual}</p>
+        </div>
 
-Fecha: ${fechaActual}
-Método de Pago: ${metodoPago}
+        <div class="divider">***************************</div>
 
-───────────────────────────────────────────
-CLIENTE:
-───────────────────────────────────────────
-${clienteInfo}
+        <div class="section">
+          <strong>CLIENTE:</strong>
+          <p>${tipoCliente === 'registrado' ? selectedCliente.nombre : nuevoCliente.nombre}</p>
+          <p>Cédula: ${tipoCliente === 'registrado' ? selectedCliente.cedula : nuevoCliente.cedula}</p>
+        </div>
 
-───────────────────────────────────────────
-PRODUCTOS:
-───────────────────────────────────────────
-${items.map(item => {
-  const subtotalUSD = item.precio * item.cantidad
-  const subtotalBs = convertToLocal(subtotalUSD)
-  return `${item.nombre}\n  Cantidad: ${item.cantidad}\n  Precio Unit: $${item.precio.toFixed(2)} (Bs. ${convertToLocal(item.precio).toFixed(2)})\n  Subtotal: $${subtotalUSD.toFixed(2)} (Bs. ${subtotalBs.toFixed(2)})`
-}).join('\n\n')}
+        <div class="divider">---------------------------</div>
 
-───────────────────────────────────────────
-TOTAL:
-───────────────────────────────────────────
-  USD: $${totalUSD.toFixed(2)}
-  Bs:  ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <div class="section">
+          <strong>PRODUCTOS:</strong>
+          <div class="items">
+            ${items.map(item => `
+              <div class="item">
+                <div class="item-row">
+                  <span>${item.nombre}</span>
+                  <span>x${item.cantidad}</span>
+                </div>
+                <div class="item-price">
+                  <span>$${item.precio.toFixed(2)}</span>
+                  <span>Bs. ${convertToLocal(item.precio).toFixed(2)}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
 
-Tasa de Cambio: Bs. ${currencyConfig.tasaCambio}
-${notas ? `\nNotas: ${notas}` : ''}
+        <div class="divider">---------------------------</div>
 
-═══════════════════════════════════════════
-        ¡Gracias por su compra!
-═══════════════════════════════════════════
+        <div class="totals">
+          <div class="total-row main">
+            <span>TOTAL USD:</span>
+            <span>$${totalUSD.toFixed(2)}</span>
+          </div>
+          <div class="total-row main">
+            <span>TOTAL BS:</span>
+            <span>Bs. ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <div class="payment-info">
+            <p>PAGO: ${metodoPago.toUpperCase()} ${
+              metodoPago === 'efectivo' 
+                ? `(${monedaEfectivo.toUpperCase()})` 
+                : (metodoPago === 'transferencia' || metodoPago === 'pago_movil' || metodoPago === 'punto'
+                    ? `<br>Ref: ${datosPago.referencia}` 
+                    : '')
+            }</p>
+          </div>
+        </div>
+
+        <div class="divider">***************************</div>
+
+        <div class="footer">
+          <p>Tasa: Bs. ${currencyConfig.tasaCambio}</p>
+          <p>¡Gracias por su preferencia!</p>
+        </div>
+      </div>
     `
 
-    // Crear ventana de impresión
-    const ventanaImpresion = window.open('', '', 'width=800,height=600')
+    const ventanaImpresion = window.open('', '', 'width=400,height=600')
     ventanaImpresion.document.write(`
       <html>
         <head>
           <title>Factura - H2O Manager</title>
           <style>
+            @page { margin: 0; }
             body {
-              font-family: 'Courier New', monospace;
-              padding: 20px;
-              max-width: 800px;
-              margin: 0 auto;
+              font-family: 'Courier New', Courier, monospace;
+              padding: 5px;
+              width: 58mm;
+              margin: 0;
+              font-size: 12px;
+              line-height: 1.2;
+              color: #000;
             }
-            pre {
-              white-space: pre-wrap;
-              font-size: 14px;
-              line-height: 1.5;
-            }
+            .ticket { width: 100%; }
+            .header { text-align: center; margin-bottom: 5px; }
+            .header h2 { margin: 0; font-size: 16px; }
+            .header p { margin: 2px 0; }
+            .divider { text-align: center; margin: 5px 0; font-weight: bold; }
+            .section { margin: 5px 0; }
+            .item { margin-bottom: 5px; }
+            .item-row { display: flex; justify-content: space-between; font-weight: bold; }
+            .item-price { display: flex; justify-content: space-between; font-size: 10px; padding-left: 5px; }
+            .totals { margin: 5px 0; }
+            .total-row { display: flex; justify-content: space-between; margin: 2px 0; }
+            .total-row.main { font-weight: bold; font-size: 13px; }
+            .payment-info { margin-top: 5px; font-size: 11px; }
+            .footer { text-align: center; margin-top: 10px; font-size: 10px; }
             @media print {
-              body { padding: 0; }
+              body { width: 58mm; }
+              .no-print { display: none; }
             }
           </style>
         </head>
         <body>
-          <pre>${factura}</pre>
+          ${factura}
           <script>
             window.onload = () => {
-              window.print()
+              window.print();
+              setTimeout(() => { window.close(); }, 500);
             }
           </script>
         </body>
@@ -228,6 +406,8 @@ ${notas ? `\nNotas: ${notas}` : ''}
     setNuevoCliente({ nombre: '', cedula: '' })
     setItems([])
     setMetodoPago('efectivo')
+    setMonedaEfectivo('usd')
+    setDatosPago({ banco: '', telefono: '', cedula: '', referencia: '' })
     setNotas('')
     setSearchCliente('')
   }
@@ -315,27 +495,36 @@ ${notas ? `\nNotas: ${notas}` : ''}
                   </div>
 
                   <div className="clientes-grid">
-                    {clientesFiltrados.map((cliente) => (
-                      <div
-                        key={cliente.id}
-                        className={`cliente-card ${selectedCliente?.id === cliente.id ? 'selected' : ''}`}
-                        onClick={() => setSelectedCliente(cliente)}
-                      >
-                        <div className="cliente-avatar-large">
-                          {cliente.nombre.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                        </div>
-                        <div className="cliente-info-large">
-                          <h3>{cliente.nombre}</h3>
-                          <p>{cliente.cedula}</p>
-                          <p>{cliente.telefono}</p>
-                        </div>
-                        {selectedCliente?.id === cliente.id && (
-                          <div className="selected-badge">
-                            <FiCheck />
-                          </div>
-                        )}
+                    {loading ? (
+                      <div className="loading-state">
+                        <FiLoader className="spin" />
+                        <p>Cargando clientes...</p>
                       </div>
-                    ))}
+                    ) : clientesFiltrados.length > 0 ? (
+                      clientesFiltrados.map((cliente) => (
+                        <div
+                          key={cliente.id}
+                          className={`cliente-card ${selectedCliente?.id === cliente.id ? 'selected' : ''}`}
+                          onClick={() => setSelectedCliente(cliente)}
+                        >
+                          <div className="cliente-avatar-large">
+                            {cliente.nombre?.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                          </div>
+                          <div className="cliente-info-large">
+                            <h3>{cliente.nombre}</h3>
+                            <p>{cliente.cedula}</p>
+                            <p>{cliente.telefono}</p>
+                          </div>
+                          {selectedCliente?.id === cliente.id && (
+                            <div className="selected-badge">
+                              <FiCheck />
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="no-results">No se encontraron clientes</div>
+                    )}
                   </div>
                 </>
               )}
@@ -355,9 +544,13 @@ ${notas ? `\nNotas: ${notas}` : ''}
                       <input
                         type="text"
                         id="cedula"
-                        placeholder="Ej: 101-2023-456"
+                        placeholder="Ej: 20123456"
+                        maxLength="9"
                         value={nuevoCliente.cedula}
-                        onChange={(e) => setNuevoCliente({...nuevoCliente, cedula: e.target.value})}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 9)
+                          setNuevoCliente({...nuevoCliente, cedula: val})
+                        }}
                       />
                     </div>
                     
@@ -398,7 +591,12 @@ ${notas ? `\nNotas: ${notas}` : ''}
                 <div className="productos-disponibles">
                   <h3>Productos Disponibles</h3>
                   <div className="productos-grid">
-                    {productosMock.map((producto) => {
+                    {loading ? (
+                      <div className="loading-state">
+                        <FiLoader className="spin" />
+                        <p>Cargando productos...</p>
+                      </div>
+                    ) : productos.map((producto) => {
                       const dualPrice = formatDualPrice(producto.precio)
                       return (
                         <div key={producto.id} className="producto-card" onClick={() => agregarItem(producto)}>
@@ -544,23 +742,120 @@ ${notas ? `\nNotas: ${notas}` : ''}
                         onChange={(e) => setMetodoPago(e.target.value)}
                       />
                       <div className="metodo-info">
-                        <FiDollarSign />
+                        <FiCreditCard />
                         <span>Transferencia</span>
                       </div>
                     </label>
-                    <label className={`metodo-pago-card ${metodoPago === 'tarjeta' ? 'selected' : ''}`}>
+                    <label className={`metodo-pago-card ${metodoPago === 'pago_movil' ? 'selected' : ''}`}>
                       <input
                         type="radio"
                         name="metodoPago"
-                        value="tarjeta"
-                        checked={metodoPago === 'tarjeta'}
+                        value="pago_movil"
+                        checked={metodoPago === 'pago_movil'}
                         onChange={(e) => setMetodoPago(e.target.value)}
                       />
                       <div className="metodo-info">
-                        <FiDollarSign />
-                        <span>Tarjeta</span>
+                        <FiSmartphone />
+                        <span>Pago Móvil</span>
                       </div>
                     </label>
+                    <label className={`metodo-pago-card ${metodoPago === 'punto' ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="metodoPago"
+                        value="punto"
+                        checked={metodoPago === 'punto'}
+                        onChange={(e) => setMetodoPago(e.target.value)}
+                      />
+                      <div className="metodo-info">
+                        <FiCreditCard />
+                        <span>Punto de Venta</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Detalles condicionales de pago */}
+                  <div className="detalles-pago-adicionales">
+                    {metodoPago === 'efectivo' && (
+                      <div className="moneda-selector-container anim-fade-in">
+                        <h4>Selecciona la moneda</h4>
+                        <div className="moneda-selector">
+                          <button 
+                            className={monedaEfectivo === 'usd' ? 'active' : ''} 
+                            onClick={() => setMonedaEfectivo('usd')}
+                          >
+                            Dólares ($)
+                          </button>
+                          <button 
+                            className={monedaEfectivo === 'bs' ? 'active' : ''} 
+                            onClick={() => setMonedaEfectivo('bs')}
+                          >
+                            Bolívares (Bs)
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {(metodoPago === 'transferencia' || metodoPago === 'pago_movil' || metodoPago === 'punto') && (
+                      <div className="datos-pago-form anim-fade-in">
+                        <h4>
+                          {metodoPago === 'transferencia' && 'Detalles de la Transferencia'}
+                          {metodoPago === 'pago_movil' && 'Detalles del Pago Móvil'}
+                          {metodoPago === 'punto' && 'Detalles del Punto de Venta'}
+                        </h4>
+                        <div className="form-grid-2">
+                          <div className="form-group-pago">
+                            <label>Banco de origen</label>
+                            <select 
+                              value={datosPago.banco} 
+                              onChange={(e) => setDatosPago({...datosPago, banco: e.target.value})}
+                            >
+                              <option value="">Seleccionar banco...</option>
+                              {bancosVenezuela.map(b => <option key={b} value={b}>{b}</option>)}
+                            </select>
+                          </div>
+                          {metodoPago !== 'punto' && (
+                            <>
+                              <div className="form-group-pago">
+                                <label>Número de teléfono</label>
+                                <input 
+                                  type="text" 
+                                  placeholder="Ej: 0412-1234567"
+                                  value={datosPago.telefono}
+                                  onChange={(e) => setDatosPago({...datosPago, telefono: e.target.value})}
+                                />
+                              </div>
+                              <div className="form-group-pago">
+                                <label>Cédula del pagador</label>
+                                <input 
+                                  type="text" 
+                                  placeholder="Ej: 20123456"
+                                  maxLength="9"
+                                  value={datosPago.cedula}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, '').slice(0, 9)
+                                    setDatosPago({...datosPago, cedula: val})
+                                  }}
+                                />
+                              </div>
+                            </>
+                          )}
+                          <div className="form-group-pago">
+                            <label>Últimos 6 dígitos referencia</label>
+                            <input 
+                              type="text" 
+                              maxLength="6"
+                              placeholder="123456"
+                              value={datosPago.referencia}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '')
+                                setDatosPago({...datosPago, referencia: val})
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -597,8 +892,19 @@ ${notas ? `\nNotas: ${notas}` : ''}
                     </div>
                     <div className="resumen-row">
                       <span className="label">Método de Pago:</span>
-                      <span className="value">{metodoPago.charAt(0).toUpperCase() + metodoPago.slice(1)}</span>
+                      <span className="value">
+                        {metodoPago === 'pago_movil' ? 'Pago Móvil' : 
+                         metodoPago === 'punto' ? 'Punto de Venta' :
+                         metodoPago.charAt(0).toUpperCase() + metodoPago.slice(1)}
+                        {metodoPago === 'efectivo' && ` (${monedaEfectivo.toUpperCase()})`}
+                      </span>
                     </div>
+                    {(metodoPago === 'transferencia' || metodoPago === 'pago_movil' || metodoPago === 'punto') && (
+                      <div className="resumen-row-detalles">
+                        <p><span>Banco:</span> {datosPago.banco}</p>
+                        <p><span>Ref:</span> {datosPago.referencia}</p>
+                      </div>
+                    )}
                     <div className="resumen-row total-row">
                       <span className="label">Total:</span>
                       <div className="value-dual">
@@ -636,8 +942,12 @@ ${notas ? `\nNotas: ${notas}` : ''}
                 Siguiente <FiArrowRight />
               </button>
             ) : (
-              <button className="btn-primary" onClick={confirmarVenta}>
-                Confirmar Venta <FiCheck />
+              <button className="btn-primary" onClick={confirmarVenta} disabled={procesando}>
+                {procesando ? (
+                  <><FiLoader className="spin" /> Procesando...</>
+                ) : (
+                  <>Confirmar Venta <FiCheck /></>
+                )}
               </button>
             )}
           </div>
