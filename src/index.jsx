@@ -1,6 +1,6 @@
 import React from 'react';
 import './assets/css/style.css';
-import Logo from '../public/logo.webp'
+import Logo from '../public/Logo.webp'
 
 export default function Index() {
     return (
