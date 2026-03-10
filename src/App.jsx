@@ -1,129 +1,27 @@
-import { useState } from 'react'
-import { Toaster } from 'react-hot-toast'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import { ConfigProvider } from './context/ConfigContext'
-import Navbar from './components/Navbar'
-import Sidebar from './components/Sidebar'
-import Dashboard from './pages/Dashboard'
-import Login from './pages/Login'
-import Configuracion from './pages/Configuracion'
-import Clientes from './pages/Clientes'
-import Ventas from './pages/Ventas'
-import Inventario from './pages/Inventario'
-import './styles/App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Index from './index.jsx';
+import Login from './auth/login.jsx';
 
-// Contenido principal de la aplicación (usa el contexto de autenticación)
-function AppContent() {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [currentPage, setCurrentPage] = useState('dashboard')
-  const { user, loginMock, logout, isAuthenticated } = useAuth()
+//Importacion de Rutas de gerente
+import HomeGere from './gerente/home.jsx';
 
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen)
-
-  const handleLogin = (userData) => {
-    // Usar login simulado por ahora - usará login real cuando el backend esté listo
-    loginMock(userData)
-  }
-
-  const handleLogout = () => {
-    logout()
-  }
-
-  // Página de placeholder para módulos en desarrollo
-  const PlaceholderPage = ({ title }) => (
-    <div className="page-content placeholder-page">
-      <div className="placeholder-icon">🚧</div>
-      <h2>{title}</h2>
-      <p>Este módulo estará disponible próximamente</p>
-    </div>
-  )
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard />
-      case 'clientes':
-        return <Clientes />
-      case 'botellones':
-        return <PlaceholderPage title="Inventario de Botellones" />
-      case 'entregas':
-        return <PlaceholderPage title="Control de Entregas" />
-      case 'ventas':
-        return <Ventas />
-      case 'inventario':
-        return <Inventario />
-      case 'proveedores':
-        return <PlaceholderPage title="Gestión de Proveedores" />
-      case 'servicios':
-        return <PlaceholderPage title="Gestión de Servicios" />
-      case 'rutas':
-        return <PlaceholderPage title="Gestión de Rutas" />
-      case 'reportes':
-        return <PlaceholderPage title="Reportes y Estadísticas" />
-      case 'configuracion':
-        return <Configuracion section="general" />
-      default:
-        return <Dashboard />
-    }
-  }
-
-  // Mostrar login si no está autenticado
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />
-  }
-
-  return (
-    <div className="app">
-      <Navbar toggleSidebar={toggleSidebar} user={user} onLogout={handleLogout} />
-      <div className="app-container">
-        <Sidebar 
-          isOpen={sidebarOpen} 
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-        />
-        <main className={`main-content ${sidebarOpen ? '' : 'expanded'}`}>
-          {renderPage()}
-        </main>
-      </div>
-    </div>
-  )
-}
-
-// App principal con providers
 function App() {
-  return (
-    <ConfigProvider>
-      <AuthProvider>
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#fff',
-              color: '#1e293b',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-              borderRadius: '12px',
-              padding: '16px 20px',
-            },
-            success: {
-              iconTheme: {
-                primary: '#10b981',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: '#ef4444',
-                secondary: '#fff',
-              },
-            },
-          }}
-        />
-        <AppContent />
-      </AuthProvider>
-    </ConfigProvider>
-  )
+    return(
+      <BrowserRouter>
+        <Routes>
+          {/* Ruta principal */}
+          <Route path="/" element={<Index />} />
+          <Route path="/index" element={<Navigate to="/" replace />} />
+          <Route path="/login" element={<Login />} />
+
+
+          {/* Rutas de gerente */}
+          <Route path="/gerente/home" element={<HomeGere />} />
+
+          {/* Rutas para empleados */}
+        </Routes>
+      </BrowserRouter>
+    )
 }
 
-export default App
-
+export default App;

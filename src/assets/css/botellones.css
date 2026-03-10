@@ -1,0 +1,179 @@
+/* ── BOTELLONES (INVENTORY) MODULE ──────────────────── */
+
+.botellones-container {
+    padding: 10px;
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* ── STATS CARDS ─────────────────────────────────── */
+.inventory-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.inv-stat-card {
+    background: var(--surface);
+    padding: 24px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inv-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.1);
+}
+
+.inv-stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.inv-stat-info h3 {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 4px 0;
+}
+
+.inv-stat-info p {
+    font-size: 28px;
+    font-family: var(--font-display);
+    color: var(--text);
+    margin: 0;
+}
+
+/* Colors */
+.icon-blue { background: #e0f2fe; color: #0077cc; }
+.icon-green { background: #dcfce7; color: #22c55e; }
+.icon-orange { background: #ffedd5; color: #f97316; }
+.icon-red { background: #fee2e2; color: #ef4444; }
+
+/* ── INVENTORY GRID ───────────────────────────────── */
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.inventory-item-card {
+    background: var(--surface);
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.item-badge {
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.item-title h2 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    margin: 0;
+    color: var(--text);
+}
+
+.item-stock-display {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.stock-value {
+    font-size: 48px;
+    font-family: var(--font-display);
+    display: block;
+    line-height: 1;
+}
+
+.stock-label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.item-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.btn-stock {
+    padding: 10px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-stock.in { background: #dcfce7; color: #166534; }
+.btn-stock.out { background: #fee2e2; color: #991b1b; }
+
+.btn-stock:hover { transform: scale(1.02); filter: brightness(0.95); }
+
+/* ── HISTORY TABLE ────────────────────────────────── */
+.history-section-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    margin: 40px 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.history-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.badge-in { background: #dcfce7; color: #166534; }
+.badge-out { background: #fee2e2; color: #991b1b; }
+
+/* ── RESPONSIVE ────────────────────────────────────── */
+@media (max-width: 768px) {
+    .inventory-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .inventory-grid {
+        grid-template-columns: 1fr;
+    }
+}
