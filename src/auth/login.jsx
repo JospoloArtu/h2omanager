@@ -3,7 +3,7 @@ import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight } from 'react-icons/fi'
 import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
 import '../assets/css/login.css'
-import Logo from '../../public/logo.webp'
+import Logo from '../../public/Logo.webp'
 
 export default function Login() {
     const navigate = useNavigate();
