@@ -1,74 +1,28 @@
-import { useState } from "react";
-import {
-  FiRefreshCw,
-  FiPackage,
-  FiUsers,
-  FiTruck,
-  FiClock,
-  FiPlus,
-  FiUserPlus,
-  FiMapPin,
-  FiArrowRight,
-} from "react-icons/fi";
+import { FiRefreshCw, FiPackage, FiUsers, FiTruck, FiClock, FiPlus, FiUserPlus, FiMapPin, FiArrowRight } from "react-icons/fi";
 import { TbBottle } from "react-icons/tb";
+import { useNavigate } from "react-router-dom";
 import "../assets/css/dashboard.css";
-import Navbar from "../components/header";
-import Sidebar from "../components/menu";
-import Configuracion from "./configuracion";
-import Clientes from "./clientes";
-import Botellones from "./botellones";
-import VentasWizard from "./ventas";
 
 const stats = [
-  {
-    icon: FiPackage,
-    color: "blue",
-    value: 347,
-    label: "Botellones Disponibles",
-  },
+  { icon: FiPackage, color: "blue", value: 347, label: "Botellones Disponibles" },
   { icon: FiUsers, color: "green", value: 128, label: "Clientes Activos" },
   { icon: FiTruck, color: "orange", value: 24, label: "Entregas Hoy" },
   { icon: FiClock, color: "red", value: 8, label: "Pendientes" },
 ];
 
 const entregas = [
-  {
-    cliente: "Juan Pérez",
-    cantidad: 5,
-    direccion: "Av. Principal #123",
-    estado: "entregado",
-  },
-  {
-    cliente: "María García",
-    cantidad: 3,
-    direccion: "Calle 10 #45",
-    estado: "en-camino",
-  },
-  {
-    cliente: "Carlos López",
-    cantidad: 10,
-    direccion: "Zona Industrial #78",
-    estado: "pendiente",
-  },
-  {
-    cliente: "Ana Martínez",
-    cantidad: 2,
-    direccion: "Residencias Sol #12",
-    estado: "entregado",
-  },
-  {
-    cliente: "Luis Ramírez",
-    cantidad: 6,
-    direccion: "Urb. Las Palmas #5",
-    estado: "en-camino",
-  },
+  { cliente: "Juan Pérez", cantidad: 5, direccion: "Av. Principal #123", estado: "entregado" },
+  { cliente: "María García", cantidad: 3, direccion: "Calle 10 #45", estado: "en-camino" },
+  { cliente: "Carlos López", cantidad: 10, direccion: "Zona Industrial #78", estado: "pendiente" },
+  { cliente: "Ana Martínez", cantidad: 2, direccion: "Residencias Sol #12", estado: "entregado" },
+  { cliente: "Luis Ramírez", cantidad: 6, direccion: "Urb. Las Palmas #5", estado: "en-camino" },
 ];
 
 const acciones = [
-  { icon: FiPlus, label: "Nueva Entrega", page: "entregas" },
-  { icon: FiUserPlus, label: "Nuevo Cliente", page: "clientes" },
-  { icon: TbBottle, label: "Registrar Botellones", page: "botellones" },
-  { icon: FiMapPin, label: "Planificar Ruta", page: "rutas" },
+  { icon: FiPlus, label: "Nueva Entrega", link: "/gerente/entregas" },
+  { icon: FiUserPlus, label: "Nuevo Cliente", link: "/gerente/clientes" },
+  { icon: TbBottle, label: "Registrar Botellones", link: "/gerente/botellones" },
+  { icon: FiMapPin, label: "Planificar Ruta", link: "/gerente/rutas" },
 ];
 
 const estadoConfig = {
@@ -77,7 +31,9 @@ const estadoConfig = {
   pendiente: { label: "Pendiente", cls: "badge-red" },
 };
 
-function DashboardContent({ setCurrentPage }) {
+export default function HomeGere() {
+  const navigate = useNavigate();
+
   return (
     <div className="dash">
       {/* Header */}
@@ -118,7 +74,7 @@ function DashboardContent({ setCurrentPage }) {
             <h2>Entregas Recientes</h2>
             <button
               className="btn-ver"
-              onClick={() => setCurrentPage("entregas")}
+              onClick={() => navigate("/gerente/entregas")}
             >
               Ver todas <FiArrowRight />
             </button>
@@ -158,11 +114,11 @@ function DashboardContent({ setCurrentPage }) {
             <h2>Acciones Rápidas</h2>
           </div>
           <div className="acciones-list">
-            {acciones.map(({ icon: Icon, label, page }) => (
+            {acciones.map(({ icon: Icon, label, link }) => (
               <button
-                key={page}
+                key={link}
                 className="accion-btn"
-                onClick={() => setCurrentPage(page)}
+                onClick={() => navigate(link)}
               >
                 <span className="accion-icon">
                   <Icon />
@@ -172,51 +128,6 @@ function DashboardContent({ setCurrentPage }) {
             ))}
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-export default function HomeGere() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState("dashboard");
-  // Mock user para el menú (role 1 = gerente)
-  const user = { name: "Juan", role: 1, email: "juan@h2omanager.com" };
-
-  const renderContent = () => {
-    switch (currentPage) {
-      case "dashboard":
-      default:
-        return <DashboardContent setCurrentPage={setCurrentPage} />;
-      case "configuracion":
-        return <Configuracion />;
-      case "clientes":
-        return <Clientes />;
-      case "botellones":
-        return <Botellones />;
-      case "ventas":
-        return <VentasWizard />;
-    }
-  };
-
-  return (
-    <div className="app-layout">
-      <Sidebar
-        isOpen={isOpen}
-        onToggle={() => setIsOpen(!isOpen)}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        role={user.role}
-      />
-      <div
-        className={`main-content ${isOpen ? "sidebar-open" : "sidebar-closed"}`}
-      >
-        <Navbar
-          toggleSidebar={() => setIsOpen(!isOpen)}
-          user={user}
-          onLogout={() => {}}
-        />
-        <div className="dash-container">{renderContent()}</div>
       </div>
     </div>
   );

@@ -40,7 +40,7 @@ export default function Botellones() {
             setInventory(invData);
             setHistory(histData);
         } catch (error) {
-            Swal.fire('Error', 'No se pudo cargar el inventario', 'error');
+            Swal.fire('Error', 'No se pudo cargar el inventario', error);
         } finally {
             setIsLoading(false);
         }

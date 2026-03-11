@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
     FiTruck, 
     FiMapPin, 
@@ -13,14 +13,57 @@ import {
     FiPlus, 
     FiMinus, 
     FiTrash2,
-    FiPrinter
+    FiPrinter,
+    FiNavigation
 } from 'react-icons/fi';
 import Swal from 'sweetalert2';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import * as clientService from './services/clientes.service';
 import * as botellonService from './services/botellones.service';
 import * as ventaService from './services/ventas.service';
 import * as configService from './services/config.service';
 import '../assets/css/ventas.css';
+
+// Fix default marker icon for Leaflet + bundlers
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom marker icon
+const deliveryIcon = new L.Icon({
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+});
+
+// Component to handle map click events
+function MapClickHandler({ onMapClick }) {
+    useMapEvents({
+        click(e) {
+            onMapClick(e.latlng);
+        },
+    });
+    return null;
+}
+
+// Component to fly map to a new center
+function FlyToLocation({ center }) {
+    const map = useMap();
+    useEffect(() => {
+        if (center) {
+            map.flyTo(center, 16, { duration: 1.5 });
+        }
+    }, [center, map]);
+    return null;
+}
 
 const STEPS = [
     { id: 1, label: 'Tipo Entrega', icon: FiTruck },
@@ -29,6 +72,82 @@ const STEPS = [
     { id: 4, label: 'Pago', icon: FiDollarSign },
     { id: 5, label: 'Confirmación', icon: FiCheck }
 ];
+
+const BANCOS_VE = [
+    'Banco de Venezuela',
+    'Banesco',
+    'Banco Mercantil',
+    'BBVA Provincial',
+    'Banco Nacional de Crédito (BNC)',
+    'Banco del Tesoro',
+    'Banco Bicentenario',
+    'Banco Exterior',
+    'Banco Caroní',
+    'Banco Sofitasa',
+    'Banco Plaza',
+    'Bancaribe',
+    'Banco Activo',
+    'Bancamiga',
+    'Banco Fondo Común (BFC)',
+    'Mi Banco',
+    '100% Banco',
+    'Banco Agrícola de Venezuela',
+];
+
+// Shared input style
+const refInputStyle = {
+    width: '100%', boxSizing: 'border-box',
+    padding: '10px 14px', border: '1px solid #dde3ec',
+    borderRadius: '8px', fontSize: '14px', fontWeight: 600,
+    outline: 'none', background: '#fff',
+};
+
+// Bank/reference fields component — defined OUTSIDE to avoid remount on every render
+function BankRefFields({ banco, ref6, onBancoChange, onRefChange }) {
+    return (
+        <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+            <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>
+                    Banco emisor *
+                </label>
+                <select
+                    value={banco}
+                    onChange={(e) => onBancoChange(e.target.value)}
+                    style={{ ...refInputStyle, fontWeight: 500, color: banco ? '#1e293b' : '#94a3b8' }}
+                >
+                    <option value="">Seleccionar banco...</option>
+                    {BANCOS_VE.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+            </div>
+            <div style={{ width: '160px', flexShrink: 0 }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>
+                    Referencia (6 dígitos) *
+                </label>
+                <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={ref6}
+                    onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        onRefChange(v);
+                    }}
+                    placeholder="000000"
+                    style={{
+                        ...refInputStyle,
+                        letterSpacing: '3px', textAlign: 'center',
+                        border: ref6.length > 0 && ref6.length < 6 ? '1px solid #f59e0b' : ref6.length === 6 ? '1px solid #22c55e' : '1px solid #dde3ec',
+                    }}
+                />
+                {ref6.length > 0 && ref6.length < 6 && (
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#f59e0b', textAlign: 'center' }}>
+                        {6 - ref6.length} dígitos restantes
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export default function VentasWizard() {
     const [currentStep, setCurrentStep] = useState(1);
@@ -48,6 +167,29 @@ export default function VentasWizard() {
     const [cart, setCart] = useState([]);
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [searchClient, setSearchClient] = useState('');
+
+    // Payment details state (bank, reference, amounts for mixed)
+    const [paymentDetails, setPaymentDetails] = useState({
+        banco: '',
+        referencia: '',
+        // Mixed payment: amounts per method
+        mixedMethods: {
+            efectivo_usd: 0,
+            efectivo_ves: 0,
+            pago_movil: 0,
+            transferencia: 0,
+            punto: 0,
+        },
+        // Bank/ref per mixed sub-method
+        mixedBanco: { pago_movil: '', transferencia: '' },
+        mixedRef: { pago_movil: '', transferencia: '' },
+    });
+
+    // Delivery map state
+    const [deliveryCoords, setDeliveryCoords] = useState(null);
+    const [deliveryAddress, setDeliveryAddress] = useState('');
+    const [mapCenter, setMapCenter] = useState(null);
+    const [isLocating, setIsLocating] = useState(false);
 
     useEffect(() => {
         loadInitialData();
@@ -88,12 +230,98 @@ export default function VentasWizard() {
     };
     const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
-    const isStep1Valid = deliveryType !== null;
+    const isStep1Valid = deliveryType === 'local' || (deliveryType === 'delivery' && deliveryCoords !== null);
     const isStep2Valid = clientMode === 'registered' 
         ? selectedClient !== null 
         : (newClientCedula.trim().length > 0 && newClientName.trim().length > 0);
     const isStep3Valid = cart.length > 0;
-    const isStep4Valid = paymentMethod !== null;
+
+    // Validate reference: exactly 6 numeric digits
+    const isValidRef = (ref) => /^\d{6}$/.test(ref);
+
+    // Check if a single method needs bank/ref and if valid
+    const isSingleMethodValid = () => {
+        if (!paymentMethod || paymentMethod === 'mixto') return false;
+        if (paymentMethod === 'pago_movil' || paymentMethod === 'transferencia') {
+            return paymentDetails.banco.length > 0 && isValidRef(paymentDetails.referencia);
+        }
+        return true;
+    };
+
+    // Check if mixed payment is valid
+    const isMixedValid = () => {
+        if (paymentMethod !== 'mixto') return false;
+        const mm = paymentDetails.mixedMethods;
+        const hasSomeAmount = Object.values(mm).some(v => v > 0);
+        if (!hasSomeAmount) return false;
+        // Validate bank/ref for pago_movil and transferencia if used in mixed
+        if (mm.pago_movil > 0) {
+            if (!paymentDetails.mixedBanco.pago_movil || !isValidRef(paymentDetails.mixedRef.pago_movil)) return false;
+        }
+        if (mm.transferencia > 0) {
+            if (!paymentDetails.mixedBanco.transferencia || !isValidRef(paymentDetails.mixedRef.transferencia)) return false;
+        }
+        return true;
+    };
+
+    const isStep4Valid = paymentMethod !== null && (
+        paymentMethod === 'mixto' ? isMixedValid() : isSingleMethodValid()
+    );
+
+    // Reverse geocode to get address from coordinates
+    const reverseGeocode = async (lat, lng) => {
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                { headers: { 'Accept-Language': 'es' } }
+            );
+            const data = await res.json();
+            return data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        } catch {
+            return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        }
+    };
+
+    // Handle map click: place marker + get address
+    const handleMapClick = async (latlng) => {
+        setDeliveryCoords([latlng.lat, latlng.lng]);
+        const addr = await reverseGeocode(latlng.lat, latlng.lng);
+        setDeliveryAddress(addr);
+    };
+
+    // Request browser geolocation
+    const requestLocation = () => {
+        setIsLocating(true);
+        if (!navigator.geolocation) {
+            Swal.fire('Error', 'Tu navegador no soporta geolocalización', 'error');
+            setIsLocating(false);
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const coords = [pos.coords.latitude, pos.coords.longitude];
+                setMapCenter(coords);
+                setDeliveryCoords(coords);
+                const addr = await reverseGeocode(coords[0], coords[1]);
+                setDeliveryAddress(addr);
+                setIsLocating(false);
+            },
+            (err) => {
+                console.warn('Geolocation error:', err);
+                // Default to a generic center if denied
+                setMapCenter([10.4806, -66.9036]); // Caracas
+                setIsLocating(false);
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    };
+
+    // Request location when delivery is selected
+    useEffect(() => {
+        if (deliveryType === 'delivery' && !mapCenter) {
+            requestLocation();
+        }
+    }, [deliveryType]);
 
     // Cart Handlers
     const addToCart = (product) => {
@@ -127,6 +355,16 @@ export default function VentasWizard() {
     const cartTotalUSD = cart.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
     const cartTotalVES = cartTotalUSD * (config?.exchangeRate || 54.50);
 
+    // Calculate remaining for mixed payment
+    const calcMixedTotalBs = () => {
+        const rate = config?.exchangeRate || 1;
+        const mm = paymentDetails.mixedMethods;
+        return (mm.efectivo_usd * rate) + mm.efectivo_ves + mm.pago_movil + mm.transferencia + mm.punto;
+    };
+    const mixedTotalBs = calcMixedTotalBs();
+    const totalNeededBs = cartTotalUSD * (config?.exchangeRate || 1);
+    const mixedRemaining = totalNeededBs - mixedTotalBs;
+
     // Removed unused handleCreateNewClient function
 
     const handleConfirmSale = async () => {
@@ -154,6 +392,15 @@ export default function VentasWizard() {
                 setNewClientCedula('');
                 setCart([]);
                 setPaymentMethod(null);
+                setPaymentDetails({
+                    banco: '', referencia: '',
+                    mixedMethods: { efectivo_usd: 0, efectivo_ves: 0, pago_movil: 0, transferencia: 0, punto: 0 },
+                    mixedBanco: { pago_movil: '', transferencia: '' },
+                    mixedRef: { pago_movil: '', transferencia: '' },
+                });
+                setDeliveryCoords(null);
+                setDeliveryAddress('');
+                setMapCenter(null);
                 setCurrentStep(1);
             });
         } catch (error) {
@@ -193,6 +440,112 @@ export default function VentasWizard() {
                     <p>Despacho a domicilio</p>
                 </div>
             </div>
+
+            {/* Mini-mapa para delivery */}
+            {deliveryType === 'delivery' && (
+                <div style={{
+                    marginTop: '20px',
+                    borderRadius: '14px',
+                    overflow: 'hidden',
+                    border: '1px solid #e2e8f0',
+                    background: '#fff',
+                    animation: 'fadeIn 0.35s ease',
+                }}>
+                    <div style={{
+                        padding: '16px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderBottom: '1px solid #f1f5f9',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                                width: '36px', height: '36px', borderRadius: '10px',
+                                background: '#eff6ff', display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', color: '#3b82f6', fontSize: '18px',
+                            }}>
+                                <FiMapPin />
+                            </div>
+                            <div>
+                                <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>
+                                    Dirección de entrega
+                                </p>
+                                <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+                                    Toca el mapa para fijar la ubicación
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={requestLocation}
+                            disabled={isLocating}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                padding: '8px 14px', border: '1px solid #e2e8f0',
+                                borderRadius: '8px', background: '#fff', cursor: 'pointer',
+                                fontSize: '13px', fontWeight: 600, color: '#3b82f6',
+                                transition: 'all 0.15s',
+                            }}
+                        >
+                            <FiNavigation style={{
+                                animation: isLocating ? 'spin 1s linear infinite' : 'none'
+                            }} />
+                            {isLocating ? 'Localizando...' : 'Mi ubicación'}
+                        </button>
+                    </div>
+
+                    {/* Map container */}
+                    <div style={{ height: '280px', position: 'relative' }}>
+                        {mapCenter ? (
+                            <MapContainer
+                                center={mapCenter}
+                                zoom={15}
+                                style={{ height: '100%', width: '100%' }}
+                                zoomControl={true}
+                            >
+                                <TileLayer
+                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                />
+                                <MapClickHandler onMapClick={handleMapClick} />
+                                <FlyToLocation center={mapCenter} />
+                                {deliveryCoords && (
+                                    <Marker position={deliveryCoords} icon={deliveryIcon} />
+                                )}
+                            </MapContainer>
+                        ) : (
+                            <div style={{
+                                height: '100%', display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', justifyContent: 'center',
+                                background: '#f8fafc', color: '#94a3b8', gap: '12px',
+                            }}>
+                                <FiNavigation style={{ fontSize: '28px', animation: 'spin 1s linear infinite' }} />
+                                <p style={{ margin: 0, fontSize: '14px' }}>Solicitando permiso de ubicación...</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Address display */}
+                    {deliveryAddress && (
+                        <div style={{
+                            padding: '14px 20px',
+                            borderTop: '1px solid #f1f5f9',
+                            display: 'flex', alignItems: 'flex-start', gap: '10px',
+                            background: '#f0fdf4',
+                        }}>
+                            <FiCheck style={{ color: '#22c55e', fontSize: '18px', marginTop: '2px', flexShrink: 0 }} />
+                            <div>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: '13px', color: '#15803d' }}>
+                                    Ubicación seleccionada
+                                </p>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#4b5563', lineHeight: '1.4' }}>
+                                    {deliveryAddress}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
             <div className="wizard-footer">
                 <div />
                 <button className="btn-wizard btn-wizard-next" disabled={!isStep1Valid} onClick={nextStep}>
@@ -487,41 +840,257 @@ export default function VentasWizard() {
         </div>
     );
 
-    const renderStep4 = () => (
-        <div className="wizard-panel">
-            <div className="panel-header">
-                <h2>Método de Pago</h2>
-                <p>Selecciona cómo el cliente pagará el total de <strong>${cartTotalUSD.toFixed(2)}</strong>.</p>
-            </div>
-            
-            <div className="payment-methods">
-                {[
-                    { id: 'efectivo_usd', label: 'Efectivo (USD)', icon: FiDollarSign },
-                    { id: 'efectivo_ves', label: 'Efectivo (Bs)', icon: FiDollarSign },
-                    { id: 'pago_movil', label: 'Pago Móvil', icon: FiSmartphone },
-                    { id: 'transferencia', label: 'Transferencia', icon: FiCreditCard },
-                    { id: 'punto', label: 'Punto de Venta', icon: FiCreditCard },
-                    { id: 'mixto', label: 'Pago Mixto', icon: FiPlus }
-                ].map(method => (
-                    <div 
-                        key={method.id}
-                        className={`payment-card ${paymentMethod === method.id ? 'selected' : ''}`}
-                        onClick={() => setPaymentMethod(method.id)}
-                    >
-                        <method.icon className="payment-icon" />
-                        <h4>{method.label}</h4>
-                    </div>
-                ))}
-            </div>
+    const renderStep4 = () => {
+        const rate = config?.exchangeRate || 1;
+        const totalBs = cartTotalUSD * rate;
 
-            <div className="wizard-footer">
-                <button className="btn-wizard btn-wizard-back" onClick={prevStep}>Anterior</button>
-                <button className="btn-wizard btn-wizard-next" disabled={!isStep4Valid} onClick={nextStep}>
-                    Verificar Orden
-                </button>
+        const paymentMethods = [
+            { id: 'efectivo_usd', label: 'Efectivo (USD)', icon: FiDollarSign },
+            { id: 'efectivo_ves', label: 'Efectivo (Bs)', icon: FiDollarSign },
+            { id: 'pago_movil', label: 'Pago Móvil', icon: FiSmartphone },
+            { id: 'transferencia', label: 'Transferencia', icon: FiCreditCard },
+            { id: 'punto', label: 'Punto de Venta', icon: FiCreditCard },
+            { id: 'mixto', label: 'Pago Mixto', icon: FiPlus }
+        ];
+
+        const mixedMethodsList = [
+            { id: 'efectivo_usd', label: 'Efectivo USD ($)', currency: 'USD' },
+            { id: 'efectivo_ves', label: 'Efectivo Bs', currency: 'BS' },
+            { id: 'pago_movil', label: 'Pago Móvil', currency: 'BS', needsBank: true },
+            { id: 'transferencia', label: 'Transferencia', currency: 'BS', needsBank: true },
+            { id: 'punto', label: 'Punto de Venta', currency: 'BS' },
+        ];
+
+        // Shared input style for mixed payment
+        const inputStyle = refInputStyle;
+
+
+        return (
+            <div className="wizard-panel">
+                <div className="panel-header">
+                    <h2>Método de Pago</h2>
+                    <p>Selecciona cómo el cliente pagará el total de <strong>${cartTotalUSD.toFixed(2)}</strong> / <strong>Bs. {totalBs.toFixed(2)}</strong>.</p>
+                </div>
+                
+                <div className="payment-methods">
+                    {paymentMethods.map(method => (
+                        <div 
+                            key={method.id}
+                            className={`payment-card ${paymentMethod === method.id ? 'selected' : ''}`}
+                            onClick={() => {
+                                setPaymentMethod(method.id);
+                                setPaymentDetails(prev => ({ ...prev, banco: '', referencia: '' }));
+                            }}
+                        >
+                            <method.icon className="payment-icon" />
+                            <h4>{method.label}</h4>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ═══ Single Method Details ═══ */}
+                {paymentMethod && paymentMethod !== 'mixto' && (
+                    <div style={{
+                        marginTop: '24px', borderRadius: '14px',
+                        border: '1px solid #e2e8f0', overflow: 'hidden',
+                        animation: 'fadeIn 0.3s ease',
+                    }}>
+                        {/* Total display */}
+                        <div style={{
+                            padding: '20px 24px',
+                            background: paymentMethod === 'efectivo_usd' ? '#eff6ff' : '#f0fdf4',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{
+                                    width: '44px', height: '44px', borderRadius: '12px',
+                                    background: paymentMethod === 'efectivo_usd' ? '#3b82f6' : '#22c55e',
+                                    color: 'white', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', fontSize: '20px',
+                                }}>
+                                    <FiDollarSign />
+                                </div>
+                                <div>
+                                    <p style={{ margin: 0, fontWeight: 600, fontSize: '13px', color: '#64748b' }}>Total a pagar</p>
+                                    <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+                                        {paymentMethod === 'efectivo_usd' ? 'Efectivo en dólares'
+                                            : paymentMethod === 'efectivo_ves' ? 'Efectivo en bolívares'
+                                            : paymentMethod === 'pago_movil' ? 'Pago móvil en bolívares'
+                                            : paymentMethod === 'transferencia' ? 'Transferencia en bolívares'
+                                            : 'Punto de venta en bolívares'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                {paymentMethod === 'efectivo_usd' ? (
+                                    <>
+                                        <p style={{ margin: 0, fontSize: '28px', fontWeight: 800, color: '#1e293b' }}>${cartTotalUSD.toFixed(2)}</p>
+                                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>Ref: Bs. {totalBs.toFixed(2)}</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p style={{ margin: 0, fontSize: '28px', fontWeight: 800, color: '#15803d' }}>Bs. {totalBs.toFixed(2)}</p>
+                                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>Tasa: 1 USD = Bs. {rate}</p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Bank/Ref for pago_movil or transferencia */}
+                        {(paymentMethod === 'pago_movil' || paymentMethod === 'transferencia') && (
+                            <div style={{ padding: '16px 24px', background: '#fff', borderTop: '1px solid #f1f5f9' }}>
+                                <BankRefFields
+                                    banco={paymentDetails.banco}
+                                    ref6={paymentDetails.referencia}
+                                    onBancoChange={(v) => setPaymentDetails(prev => ({ ...prev, banco: v }))}
+                                    onRefChange={(v) => setPaymentDetails(prev => ({ ...prev, referencia: v }))}
+                                />
+                            </div>
+                        )}
+
+                        {/* Desglose for non-USD */}
+                        {paymentMethod !== 'efectivo_usd' && (
+                            <div style={{ padding: '14px 24px', background: '#fff', borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#64748b' }}>
+                                    <span>Subtotal USD</span><span>${cartTotalUSD.toFixed(2)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#64748b' }}>
+                                    <span>Tasa de cambio</span><span>× Bs. {rate}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, color: '#1e293b', paddingTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
+                                    <span>Total Bs</span><span>Bs. {totalBs.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ═══ Pago Mixto ═══ */}
+                {paymentMethod === 'mixto' && (
+                    <div style={{ marginTop: '24px', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden', animation: 'fadeIn 0.3s ease' }}>
+                        <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+                            <p style={{ margin: 0, fontWeight: 700, fontSize: '15px', color: '#1e293b' }}>Pago Mixto</p>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                                Divide el pago entre los diferentes métodos. Total a cubrir: <strong>Bs. {totalNeededBs.toFixed(2)}</strong>
+                            </p>
+                        </div>
+
+                        <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {mixedMethodsList.map(m => {
+                                const val = paymentDetails.mixedMethods[m.id] || 0;
+                                return (
+                                    <div key={m.id} style={{
+                                        padding: '14px 16px', borderRadius: '10px',
+                                        border: val > 0 ? '1.5px solid #3b82f6' : '1px solid #e2e8f0',
+                                        background: val > 0 ? '#fafbff' : '#fff',
+                                        transition: 'all 0.15s',
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                                            <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>
+                                                {m.label}
+                                            </label>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>
+                                                    {m.currency === 'USD' ? '$' : 'Bs.'}
+                                                </span>
+                                                <input
+                                                    type="number" min="0" step="0.01"
+                                                    value={val || ''}
+                                                    onChange={(e) => {
+                                                        const newVal = parseFloat(e.target.value) || 0;
+                                                        setPaymentDetails(prev => ({
+                                                            ...prev,
+                                                            mixedMethods: { ...prev.mixedMethods, [m.id]: newVal }
+                                                        }));
+                                                    }}
+                                                    placeholder="0.00"
+                                                    style={{ ...inputStyle, width: '140px', textAlign: 'right' }}
+                                                />
+                                            </div>
+                                        </div>
+                                        {m.currency === 'USD' && val > 0 && (
+                                            <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#94a3b8', textAlign: 'right' }}>
+                                                Equivale a Bs. {(val * rate).toFixed(2)}
+                                            </p>
+                                        )}
+                                        {/* Bank/ref for pago_movil and transferencia inside mixed */}
+                                        {m.needsBank && val > 0 && (
+                                            <BankRefFields
+                                                banco={paymentDetails.mixedBanco[m.id]}
+                                                ref6={paymentDetails.mixedRef[m.id]}
+                                                onBancoChange={(v) => setPaymentDetails(prev => ({
+                                                    ...prev,
+                                                    mixedBanco: { ...prev.mixedBanco, [m.id]: v }
+                                                }))}
+                                                onRefChange={(v) => setPaymentDetails(prev => ({
+                                                    ...prev,
+                                                    mixedRef: { ...prev.mixedRef, [m.id]: v }
+                                                }))}
+                                            />
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Resumen del pago mixto */}
+                        <div style={{
+                            padding: '16px 24px',
+                            background: mixedRemaining <= 0.01 && mixedRemaining >= -0.01 ? '#f0fdf4' : '#fff7ed',
+                            borderTop: '1px solid #f1f5f9',
+                            display: 'flex', flexDirection: 'column', gap: '6px',
+                        }}>
+                            {mixedMethodsList.map(m => {
+                                const val = paymentDetails.mixedMethods[m.id] || 0;
+                                if (val <= 0) return null;
+                                const bsVal = m.currency === 'USD' ? val * rate : val;
+                                return (
+                                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#64748b' }}>
+                                        <span>{m.label}</span>
+                                        <span>
+                                            {m.currency === 'USD' ? `$${val.toFixed(2)} → ` : ''}
+                                            Bs. {bsVal.toFixed(2)}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, paddingTop: '8px', borderTop: '1px dashed #e2e8f0', color: '#1e293b' }}>
+                                <span>Total cubierto</span>
+                                <span>Bs. {mixedTotalBs.toFixed(2)} / Bs. {totalNeededBs.toFixed(2)}</span>
+                            </div>
+                            {mixedRemaining > 0.01 && (
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    marginTop: '6px', padding: '10px 14px',
+                                    borderRadius: '8px', background: '#fef3c7',
+                                    fontSize: '13px', fontWeight: 600, color: '#92400e',
+                                }}>
+                                    ⚠️ Faltan Bs. {mixedRemaining.toFixed(2)} por cubrir
+                                </div>
+                            )}
+                            {mixedRemaining <= 0.01 && mixedRemaining >= -0.01 && Object.values(paymentDetails.mixedMethods).some(v => v > 0) && (
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    marginTop: '6px', padding: '10px 14px',
+                                    borderRadius: '8px', background: '#dcfce7',
+                                    fontSize: '13px', fontWeight: 600, color: '#15803d',
+                                }}>
+                                    <FiCheck /> Monto completo cubierto
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                <div className="wizard-footer">
+                    <button className="btn-wizard btn-wizard-back" onClick={prevStep}>Anterior</button>
+                    <button className="btn-wizard btn-wizard-next" disabled={!isStep4Valid} onClick={nextStep}>
+                        Verificar Orden
+                    </button>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderStep5 = () => (
         <div className="wizard-panel">
@@ -539,6 +1108,9 @@ export default function VentasWizard() {
                         <p>Cliente: {selectedClient?.name}</p>
                         <p>C.I: {selectedClient?.cedula}</p>
                         <p>Tipo: {deliveryType === 'local' ? 'Retiro en Tienda' : 'Despacho/Delivery'}</p>
+                        {deliveryType === 'delivery' && deliveryAddress && (
+                            <p>Dirección: {deliveryAddress}</p>
+                        )}
                     </div>
                     
                     <table className="receipt-table">
@@ -589,7 +1161,25 @@ export default function VentasWizard() {
             </div>
 
             <div className="wizard-footer">
-                <button className="btn-wizard btn-wizard-back" onClick={prevStep}>Volver</button>
+                <button className="btn-wizard btn-wizard-back" onClick={() => {
+                    setDeliveryType(null);
+                    setClientMode('registered');
+                    setSelectedClient(null);
+                    setNewClientName('');
+                    setNewClientCedula('');
+                    setCart([]);
+                    setPaymentMethod(null);
+                    setPaymentDetails({
+                        banco: '', referencia: '',
+                        mixedMethods: { efectivo_usd: 0, efectivo_ves: 0, pago_movil: 0, transferencia: 0, punto: 0 },
+                        mixedBanco: { pago_movil: '', transferencia: '' },
+                        mixedRef: { pago_movil: '', transferencia: '' },
+                    });
+                    setDeliveryCoords(null);
+                    setDeliveryAddress('');
+                    setMapCenter(null);
+                    setCurrentStep(1);
+                }}><FiPlus /> Nueva Venta</button>
                 <button className="btn-wizard btn-wizard-next" disabled={isLoading} onClick={handleConfirmSale} style={{ background: '#10b981' }}>
                     <FiPrinter /> Procesar e Imprimir
                 </button>

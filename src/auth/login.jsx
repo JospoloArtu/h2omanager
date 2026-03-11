@@ -99,6 +99,7 @@ export default function Login() {
                 <input
                 id="email"
                 type="email"
+                maxLength={50}
                 placeholder="ejemplo@correo.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -121,12 +122,19 @@ export default function Login() {
                     onChange={e => setPassword(e.target.value)}
                     disabled={isLoading}
                     autoComplete="current-password"
+                    maxLength={15}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            handleSubmit();
+                        }
+                    }}
                 />
                 <button
                     type="button"
                     className="toggle-btn"
                     onClick={() => setShowPass(!showPassword)}
                     tabIndex={-1}
+                    style={{height:'10px', width:'10px'}}
                     aria-label="Mostrar contraseña"
                 >
                     {showPassword ? <FiEyeOff /> : <FiEye />}

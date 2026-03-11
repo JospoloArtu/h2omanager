@@ -15,32 +15,33 @@ import {
     FiMenu
 } from 'react-icons/fi'
 import { TbBottle } from 'react-icons/tb'
+import { useNavigate, useLocation } from 'react-router-dom'
 import '../assets/css/menu.css'
 import Logo from '../../public/Logo.webp'
 
 const MENU_GERENTE = [
-    { id: 'dashboard',   icon: FiHome,        label: 'Dashboard'   },
-    { id: 'clientes',    icon: FiUsers,       label: 'Clientes'    },
-    { id: 'botellones',  icon: FiPackage,     label: 'Botellones'  },
-    { id: 'entregas',    icon: FiTruck,       label: 'Entregas'    },
-    { id: 'ventas',      icon: FiShoppingCart,label: 'Ventas'      },
-    { id: 'empleados',   icon: FiUserCheck,   label: 'Empleados'   },
-    { id: 'historial',   icon: FiClock,       label: 'Historial'   },
-    { id: 'inventario',  icon: FiPackage,     label: 'Inventario'  },
-    { id: 'proveedores', icon: FiUserCheck,   label: 'Proveedores' },
-    { id: 'servicios',   icon: FiTool,        label: 'Servicios'   },
-    { id: 'rutas',       icon: FiMap,         label: 'Rutas'       },
-    { id: 'reportes',    icon: FiBarChart2,   label: 'Reportes'    },
+    { id: 'home',        icon: FiHome,        label: 'Dashboard',   link: '/gerente/home' },
+    { id: 'clientes',    icon: FiUsers,       label: 'Clientes',    link: '/gerente/clientes' },
+    { id: 'botellones',  icon: FiPackage,     label: 'Botellones',  link: '/gerente/botellones' },
+    { id: 'entregas',    icon: FiTruck,       label: 'Entregas',    link: '/gerente/entregas' },
+    { id: 'ventas',      icon: FiShoppingCart,label: 'Ventas',      link: '/gerente/ventas' },
+    { id: 'empleados',   icon: FiUserCheck,   label: 'Empleados',   link: '/gerente/empleados' },
+    { id: 'historial',   icon: FiClock,       label: 'Historial',   link: '/gerente/historial' },
+
+    { id: 'proveedores', icon: FiUserCheck,   label: 'Proveedores', link: '/gerente/proveedores' },
+    { id: 'servicios',   icon: FiTool,        label: 'Servicios',   link: '/gerente/servicios' },
+    { id: 'rutas',       icon: FiMap,         label: 'Rutas',       link: '/gerente/rutas' },
+    { id: 'reportes',    icon: FiBarChart2,   label: 'Reportes',    link: '/gerente/reportes' },
 ]
 
 const MENU_EMPLEADO = [
-    { id: 'dashboard',  icon: FiHome,         label: 'Dashboard'  },
-    { id: 'clientes',   icon: FiUsers,        label: 'Clientes'   },
-    { id: 'botellones', icon: FiPackage,      label: 'Botellones' },
-    { id: 'entregas',   icon: FiTruck,        label: 'Entregas'   },
-    { id: 'ventas',     icon: FiShoppingCart, label: 'Ventas'     },
-    { id: 'historial',  icon: FiClock,        label: 'Historial'  },
-    { id: 'inventario', icon: FiPackage,      label: 'Inventario' },
+    { id: 'home',       icon: FiHome,         label: 'Dashboard',   link: '/empleado/home' },
+    { id: 'clientes',   icon: FiUsers,        label: 'Clientes',    link: '/empleado/clientes' },
+    { id: 'botellones', icon: FiPackage,      label: 'Botellones',  link: '/empleado/botellones' },
+    { id: 'entregas',   icon: FiTruck,        label: 'Entregas',    link: '/empleado/entregas' },
+    { id: 'ventas',     icon: FiShoppingCart, label: 'Ventas',      link: '/empleado/ventas' },
+    { id: 'historial',  icon: FiClock,        label: 'Historial',   link: '/empleado/historial' },
+
 ]
 
 const MENU_BY_ROLE = {
@@ -48,11 +49,14 @@ const MENU_BY_ROLE = {
     2: MENU_EMPLEADO,
 }
 
-export default function Sidebar({ isOpen, onToggle, currentPage, setCurrentPage, role }) {
+export default function Sidebar({ isOpen, onToggle, role }) {
+    const navigate = useNavigate()
+    const location = useLocation()
+
     // Si no hay rol o es desconocido → gerente por defecto
     const menuItems = MENU_BY_ROLE[role] ?? MENU_GERENTE
 
-    const isConfigPage = currentPage === 'configuracion' || currentPage?.startsWith('config-')
+    const isConfigPage = location.pathname.includes('configuracion')
 
     return (
         <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
@@ -81,20 +85,23 @@ export default function Sidebar({ isOpen, onToggle, currentPage, setCurrentPage,
 
             {/* Menu */}
             <ul className="menu-list">
-                {menuItems.map(({ id, icon: Icon, label }) => (
-                    <li
-                        key={id}
-                        className={`menu-item ${currentPage === id ? 'active' : ''}`}
-                        onClick={() => setCurrentPage(id)}
-                        title={!isOpen ? label : ''}
-                    >
-                        <span className="menu-icon-wrap">
-                            <Icon className="menu-icon" />
-                        </span>
-                        {isOpen && <span className="menu-label">{label}</span>}
-                        {isOpen && currentPage === id && <span className="active-dot" />}
-                    </li>
-                ))}
+                {menuItems.map(({ id, icon: Icon, label, link }) => {
+                    const isActive = location.pathname === link
+                    return (
+                        <li
+                            key={id}
+                            className={`menu-item ${isActive ? 'active' : ''}`}
+                            onClick={() => navigate(link)}
+                            title={!isOpen ? label : ''}
+                        >
+                            <span className="menu-icon-wrap">
+                                <Icon className="menu-icon" />
+                            </span>
+                            {isOpen && <span className="menu-label">{label}</span>}
+                            {isOpen && isActive && <span className="active-dot" />}
+                        </li>
+                    )
+                })}
             </ul>
 
             {/* Footer — Configuración (solo gerente) */}
@@ -102,7 +109,7 @@ export default function Sidebar({ isOpen, onToggle, currentPage, setCurrentPage,
                 <div className="sidebar-footer">
                     <div
                         className={`menu-item ${isConfigPage ? 'active' : ''}`}
-                        onClick={() => setCurrentPage('configuracion')}
+                        onClick={() => navigate(role === 2 ? '/empleado/configuracion' : '/gerente/configuracion')}
                         title={!isOpen ? 'Configuración' : ''}
                     >
                         <span className="menu-icon-wrap">

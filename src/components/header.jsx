@@ -3,11 +3,13 @@ import { TbBottle } from 'react-icons/tb'
 import { useState, useRef, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import '../assets/css/navbar.css'
+import { useNavigate } from 'react-router-dom'
 import Logo from '../../public/Logo.webp'
 
 export default function Navbar({ toggleSidebar, user, onLogout }) {
     const [showUserMenu, setShowUserMenu] = useState(false)
     const menuRef = useRef(null)
+    const navigate = useNavigate()
 
     // Cerrar menú al hacer click fuera
     useEffect(() => {
@@ -24,6 +26,7 @@ export default function Navbar({ toggleSidebar, user, onLogout }) {
         setShowUserMenu(false)
         toast.success('Sesión cerrada correctamente')
         setTimeout(() => onLogout(), 500)
+        navigate("/login")
     }
 
     const roleLabel = user?.role === 2 ? 'Empleado' : 'Gerente'
