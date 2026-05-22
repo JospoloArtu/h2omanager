@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
     FiHome,
     FiUsers,
@@ -12,9 +13,10 @@ import {
     FiTool,
     FiChevronLeft,
     FiChevronRight,
-    FiMenu
+    FiMenu,
+    FiDollarSign,
+    FiChevronDown
 } from 'react-icons/fi'
-import { TbBottle } from 'react-icons/tb'
 import { useNavigate, useLocation } from 'react-router-dom'
 import '../assets/css/menu.css'
 import Logo from '../../public/Logo.webp'
@@ -23,11 +25,27 @@ const MENU_GERENTE = [
     { id: 'home',        icon: FiHome,        label: 'Dashboard',   link: '/gerente/home' },
     { id: 'clientes',    icon: FiUsers,       label: 'Clientes',    link: '/gerente/clientes' },
     { id: 'botellones',  icon: FiPackage,     label: 'Botellones',  link: '/gerente/botellones' },
+    
+    // Módulo Contable idéntico a tus prototipos de H2OManager
+    { 
+        id: 'contabilidad', 
+        icon: FiDollarSign,  
+        label: 'Contabilidad', 
+        link: '/gerente/contabilidad',
+        children: [
+            { label: 'Plan de Cuentas',           link: '/gerente/contabilidad/cuentas' },
+            { label: 'Asientos Contables',       link: '/gerente/contabilidad/asientos' },
+            { label: 'Libro Diario',              link: '/gerente/contabilidad/diario' },
+            { label: 'Libro Mayor',               link: '/gerente/contabilidad/mayor' },
+            { label: 'Balance de Comprobación',   link: '/gerente/contabilidad/balance' },
+            { label: 'Estados Financieros',       link: '/gerente/contabilidad/estados' },
+        ]
+    },
+
     { id: 'entregas',    icon: FiTruck,       label: 'Entregas',    link: '/gerente/entregas' },
     { id: 'ventas',      icon: FiShoppingCart,label: 'Ventas',      link: '/gerente/ventas' },
     { id: 'empleados',   icon: FiUserCheck,   label: 'Empleados',   link: '/gerente/empleados' },
     { id: 'historial',   icon: FiClock,       label: 'Historial',   link: '/gerente/historial' },
-
     { id: 'proveedores', icon: FiUserCheck,   label: 'Proveedores', link: '/gerente/proveedores' },
     { id: 'servicios',   icon: FiTool,        label: 'Servicios',   link: '/gerente/servicios' },
     { id: 'rutas',       icon: FiMap,         label: 'Rutas',       link: '/gerente/rutas' },
@@ -41,7 +59,6 @@ const MENU_EMPLEADO = [
     { id: 'entregas',   icon: FiTruck,        label: 'Entregas',    link: '/empleado/entregas' },
     { id: 'ventas',     icon: FiShoppingCart, label: 'Ventas',      link: '/empleado/ventas' },
     { id: 'historial',  icon: FiClock,        label: 'Historial',   link: '/empleado/historial' },
-
 ]
 
 const MENU_BY_ROLE = {
@@ -53,10 +70,20 @@ export default function Sidebar({ isOpen, onToggle, role }) {
     const navigate = useNavigate()
     const location = useLocation()
 
-    // Si no hay rol o es desconocido → gerente por defecto
-    const menuItems = MENU_BY_ROLE[role] ?? MENU_GERENTE
+    // Estado para saber cuál submenú está desplegado
+    const [openSubmenu, setOpenSubmenu] = useState(null)
 
+    const menuItems = MENU_BY_ROLE[role] ?? MENU_GERENTE
     const isConfigPage = location.pathname.includes('configuracion')
+
+    // Lógica para abrir/cerrar acordeón o navegar directo
+    const handleItemClick = (item) => {
+        if (item.children) {
+            setOpenSubmenu(openSubmenu === item.id ? null : item.id)
+        } else {
+            navigate(item.link)
+        }
+    }
 
     return (
         <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
@@ -85,21 +112,65 @@ export default function Sidebar({ isOpen, onToggle, role }) {
 
             {/* Menu */}
             <ul className="menu-list">
-                {menuItems.map(({ id, icon: Icon, label, link }) => {
-                    const isActive = location.pathname === link
+                {menuItems.map((item) => {
+                    const { id, icon: Icon, label, link, children } = item
+                    // El padre se mantiene activo si estás dentro de cualquier sub-módulo contable
+                    const isActive = location.pathname.includes(link)
+                    const isSubmenuOpen = openSubmenu === id
+
                     return (
-                        <li
-                            key={id}
-                            className={`menu-item ${isActive ? 'active' : ''}`}
-                            onClick={() => navigate(link)}
-                            title={!isOpen ? label : ''}
-                        >
-                            <span className="menu-icon-wrap">
-                                <Icon className="menu-icon" />
-                            </span>
-                            {isOpen && <span className="menu-label">{label}</span>}
-                            {isOpen && isActive && <span className="active-dot" />}
-                        </li>
+                        <div key={id}>
+                            <li
+                                className={`menu-item ${isActive ? 'active' : ''}`}
+                                onClick={() => handleItemClick(item)}
+                                title={!isOpen ? label : ''}
+                            >
+                                <span className="menu-icon-wrap">
+                                    <Icon className="menu-icon" />
+                                </span>
+                                {isOpen && <span className="menu-label">{label}</span>}
+                                
+                                {/* Flecha para desplegables */}
+                                {isOpen && children && (
+                                    <FiChevronDown 
+                                        style={{ 
+                                            marginLeft: 'auto', 
+                                            transition: '0.3s', 
+                                            transform: isSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)' 
+                                        }}
+                                    />
+                                )}
+                                {isOpen && isActive && !children && <span className="active-dot" />}
+                            </li>
+
+                            {/* Renderizado limpio de los submódulos contables */}
+                            {isOpen && children && isSubmenuOpen && (
+                                <ul className="submenu-list" style={{ paddingLeft: '45px', marginTop: '5px', listStyle: 'none' }}>
+                                    {children.map((child) => {
+                                        const isChildActive = location.pathname === child.link
+                                        return (
+                                            <li 
+                                                key={child.link}
+                                                onClick={(e) => {
+                                                    e.stopPropagation() // Evita que el clic cierre el menú padre
+                                                    navigate(child.link)
+                                                }}
+                                                style={{ 
+                                                    padding: '8px 0', 
+                                                    fontSize: '14px', 
+                                                    color: isChildActive ? '#2563eb' : '#64748b',
+                                                    cursor: 'pointer',
+                                                    fontWeight: isChildActive ? '600' : 'normal',
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                            >
+                                                {child.label}
+                                            </li>
+                                        )
+                                    })}
+                                </ul>
+                            )}
+                        </div>
                     )
                 })}
             </ul>

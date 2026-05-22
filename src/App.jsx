@@ -18,6 +18,10 @@ import Rutas from './gerente/rutas.jsx';
 import Servicios from './gerente/serivicios.jsx';
 import Proveedores from './gerente/provedores.jsx';
 import Empleados from './gerente/empleados.jsx';
+import PlanCuentas from './gerente/contabilidad/cuentas.jsx';
+import AsientosContables from './gerente/contabilidad/asientos.jsx';
+import LibroDiario from './gerente/contabilidad/diario.jsx';
+
 
 
 function App() {
@@ -44,7 +48,11 @@ function App() {
             <Route path="servicios" element={<Servicios />} />
             <Route path="proveedores" element={<Proveedores />} />
             <Route path="empleados" element={<Empleados />} />
-
+            <Route path="contabilidad/cuentas" element={<PlanCuentas />} />
+            <Route path="contabilidad/asientos" element={<AsientosContables />} />
+            <Route path="contabilidad/diario" element={<LibroDiario />} />
+            
+            
           </Route>
 
           {/* Rutas para empleados */}

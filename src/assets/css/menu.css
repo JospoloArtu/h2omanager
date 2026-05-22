@@ -270,3 +270,33 @@
   color: var(--accent2);
   border: 1px solid rgba(0, 184, 153, 0.22);
 }
+
+/* Rotación de la flecha */
+.chevron-icon.rotate {
+    transform: rotate(180deg);
+}
+
+/* Efecto en los sub-items */
+.submenu-item {
+    transition: all 0.2s ease;
+    list-style: none;
+    position: relative;
+}
+
+.submenu-item:hover {
+    color: #3b82f6 !important;
+    padding-left: 5px !important; /* Pequeño desplazamiento al pasar el mouse */
+}
+
+/* El puntito azul para el sub-item activo (opcional, como en tu imagen) */
+.submenu-item.sub-active::before {
+    content: '';
+    position: absolute;
+    left: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    background-color: #3b82f6;
+    border-radius: 50%;
+}
