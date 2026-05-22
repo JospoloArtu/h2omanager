@@ -29,7 +29,7 @@ export default function LibroMayor() {
             { fecha: '11/04', descripcion: 'Venta a María García', referencia: 'V-00014', debe: 30, haber: 0, saldo: 110 },
             { fecha: '12/04', descripcion: 'Venta a Juan Pérez', referencia: 'V-00015', debe: 50, haber: 0, saldo: 160 },
         ],
-        '1.1.02': [ // Movimientos de Bancos (Ejemplo rápido)
+        '1.1.02': [ // Movimientos de Bancos
             { fecha: '01/04', descripcion: 'Saldo Inicial', referencia: 'S/I', debe: 500, haber: 0, saldo: 500 },
             { fecha: '10/04', descripcion: 'Transferencia Recibida', referencia: 'V-00013', debe: 200, haber: 0, saldo: 700 },
         ],
@@ -67,6 +67,46 @@ export default function LibroMayor() {
     return (
         <div style={{ padding: '25px', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'Urbanist, sans-serif' }}>
             
+            {/* ESTILOS INYECTADOS NATIVAMENTE PARA LA IMPRESIÓN */}
+            <style>{`
+                @media print {
+                    /* Ocultar barra lateral de cuentas, buscador superior, botones de control y el panel derecho de acciones */
+                    aside, 
+                    nav, 
+                    header, 
+                    .no-print,
+                    input,
+                    button,
+                    .columna-cuentas-print,
+                    .columna-acciones-print { 
+                        display: none !important; 
+                    }
+                    
+                    /* Expandir el bloque central (tabla y gráfica) para que use el 100% del papel */
+                    .grid-principal-print {
+                        display: block !important;
+                        width: 100% !important;
+                    }
+                    
+                    /* Limpiar fondos grises y márgenes de la pantalla */
+                    body, #root, div[style*="backgroundColor: '#f8fafc'"] {
+                        background-color: white !important;
+                        color: black !important;
+                        margin: 0 !important;
+                        padding: 10px !important;
+                    }
+
+                    /* Asegurar la correcta visualización de las tablas en papel */
+                    table {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                    }
+                    th, td {
+                        border-bottom: 1px solid #cbd5e1 !important;
+                    }
+                }
+            `}</style>
+            
             {/* ENCABEZADO */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                 <div>
@@ -79,7 +119,7 @@ export default function LibroMayor() {
             </div>
 
             {/* BUSCADOR COLECTIVO */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '15px', marginBottom: '20px' }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', gap: '15px', marginBottom: '20px' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
                     <FiSearch style={{ position: 'absolute', left: '12px', top: '12px', color: '#94a3b8' }} />
                     <input 
@@ -92,15 +132,16 @@ export default function LibroMayor() {
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'white', border: '1px solid #e2e8f0', padding: '10px 16px', borderRadius: '8px', color: '#475569', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer' }}><FiFilter /> Filtros</button>
-                    <button style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'white', border: '1px solid #e2e8f0', padding: '10px 16px', borderRadius: '8px', color: '#475569', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer' }}><FiPrinter /> Imprimir</button>
+                    {/* Botón Imprimir de la barra superior vinculado */}
+                    <button onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'white', border: '1px solid #e2e8f0', padding: '10px 16px', borderRadius: '8px', color: '#475569', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer' }}><FiPrinter /> Imprimir</button>
                 </div>
             </div>
 
             {/* GRID PRINCIPAL */}
-            <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.5fr 0.7fr', gap: '20px', alignItems: 'start' }}>
+            <div className="grid-principal-print" style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.5fr 0.7fr', gap: '20px', alignItems: 'start' }}>
                 
                 {/* INTERFAZ 1: LISTA DINÁMICA */}
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px' }}>
+                <div className="columna-cuentas-print" style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px' }}>
                     <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#475569', marginTop: 0, marginBottom: '12px' }}>Lista de Cuentas</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '520px', overflowY: 'auto' }}>
                         {cuentasFiltradas.map((cta) => (
@@ -136,9 +177,9 @@ export default function LibroMayor() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                             <thead>
                                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                    <th style={{ padding: '10px 14px', textLeft: 'left', color: '#64748b' }}>Fecha</th>
-                                    <th style={{ padding: '10px 14px', textLeft: 'left', color: '#64748b' }}>Descripción</th>
-                                    <th style={{ padding: '10px 14px', textLeft: 'left', color: '#64748b' }}>Ref</th>
+                                    <th style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b' }}>Fecha</th>
+                                    <th style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b' }}>Descripción</th>
+                                    <th style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b' }}>Ref</th>
                                     <th style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b' }}>Debe</th>
                                     <th style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b' }}>Haber</th>
                                     <th style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b' }}>Saldo</th>
@@ -184,8 +225,8 @@ export default function LibroMayor() {
                     </div>
                 </div>
 
-                {/* INTERFAZ 3: RESUMEN LATERAL */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* INTERFAZ 3: RESUMEN LATERAL ACCIONES */}
+                <div className="columna-acciones-print" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px' }}>
                         <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', margin: '0 0 14px 0' }}>Detalle de la Cuenta</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px' }}>
@@ -214,6 +255,8 @@ export default function LibroMayor() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#f0f6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '10px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}><FiEye /> Ver Movimientos</button>
                         <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: 'white', color: '#16a34a', border: '1px solid #bbf7d0', padding: '10px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}><FiDownload /> Exportar a Excel</button>
+                        {/* Botón Imprimir de Acciones Rápidas */}
+                        <button onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', padding: '10px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}><FiPrinter /> Imprimir Mayor</button>
                     </div>
                 </div>
 

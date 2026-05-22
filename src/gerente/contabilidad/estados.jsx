@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FiDownload, FiInfo } from 'react-icons/fi';
 import { BiDollarCircle, BiTrendingDown, BiTrendingUp } from 'react-icons/bi';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Swal from 'sweetalert2';
 
 export default function EstadoResultados() {
@@ -14,17 +14,112 @@ export default function EstadoResultados() {
     ];
 
     const handleExportar = (tipo) => {
-        Swal.fire({
-            icon: 'success',
-            title: `Reporte Exportado`,
-            text: `El Estado de Resultados se ha descargado en formato ${tipo}.`,
-            confirmButtonText: 'Aceptar',
-            confirmButtonColor: '#2563eb'
-        });
+        if (tipo === 'PDF') {
+            window.print();
+        } else {
+            Swal.fire({
+                icon: 'success',
+                title: `Reporte Exportado`,
+                text: `El Estado de Resultados se ha descargado en formato ${tipo}.`,
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#2563eb'
+            });
+        }
     };
 
     return (
-        <div style={{ padding: '30px', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+        <div className="seccion-reporte-final" style={{ padding: '30px', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+            
+            {/* HOJA DE ESTILOS CSS INLINE EXCLUSIVA PARA PREVENIR HOJAS EN BLANCO */}
+            <style>{`
+                @media print {
+                    /* 1. Ocultar absolutamente TODO lo que esté en la página web */
+                    body * {
+                        visibility: hidden !important;
+                    }
+
+                    /* 2. Hacer visible ÚNICAMENTE el contenedor del reporte y sus elementos hijos */
+                    .seccion-reporte-final, .seccion-reporte-final * {
+                        visibility: visible !important;
+                    }
+
+                    /* 3. Posicionar el reporte en la esquina superior izquierda del papel */
+                    .seccion-reporte-final {
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        background: white !important;
+                        color: #0f172a !important;
+                    }
+
+                    /* 4. Forzar que los estilos de color de fondo se rendericen en el PDF */
+                    html, body {
+                        background-color: white !important;
+                        background: white !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+
+                    /* Ocultar botones de exportar y alertas */
+                    .no-print, button, .info-box { 
+                        display: none !important; 
+                    }
+
+                    /* Ajustar fila de tarjetas KPI */
+                    .kpi-print-row {
+                        display: flex !important;
+                        flex-direction: row !important;
+                        gap: 15px !important;
+                        width: 100% !important;
+                        margin-bottom: 25px !important;
+                    }
+
+                    .kpi-print-card {
+                        flex: 1 !important;
+                        background: #ffffff !important;
+                        border: 1px solid #e2e8f0 !important;
+                        padding: 15px !important;
+                        border-radius: 8px !important;
+                    }
+
+                    /* Cambiar grid central a bloque continuo para la hoja vertical */
+                    .main-layout {
+                        display: block !important;
+                        width: 100% !important;
+                    }
+
+                    /* Evitar rupturas raras de páginas */
+                    .print-section {
+                        page-break-inside: avoid !important;
+                        width: 100% !important;
+                        margin-bottom: 25px !important;
+                    }
+
+                    table {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                    }
+
+                    th, td {
+                        padding: 8px 10px !important;
+                        font-size: 12px !important;
+                        border-bottom: 1px solid #e2e8f0 !important;
+                    }
+
+                    .chart-container {
+                        page-break-inside: avoid !important;
+                        margin-top: 20px !important;
+                        border: 1px solid #e2e8f0 !important;
+                        padding: 15px !important;
+                        border-radius: 8px !important;
+                        width: 100% !important;
+                    }
+                }
+            `}</style>
             
             {/* ENCABEZADO SUPERIOR */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
@@ -32,7 +127,7 @@ export default function EstadoResultados() {
                     <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>Estado de Resultados</h1>
                     <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>Resumen de ingresos, gastos y utilidad del período</p>
                 </div>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div className="no-print" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <div style={{ padding: '8px 12px', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>📅 {fecha}</span>
                     </div>
@@ -46,10 +141,10 @@ export default function EstadoResultados() {
             </div>
 
             {/* TARJETAS KPI SUPERIORES */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '25px' }}>
+            <div className="kpi-print-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '25px' }}>
                 {/* Ingresos Totales */}
-                <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: '#10b981', color: 'white', display: 'flex', alignItems: 'center', center: 'center', justifyContent: 'center' }}><BiDollarCircle size={24} /></div>
+                <div className="kpi-print-card" style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: '#10b981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BiDollarCircle size={24} /></div>
                     <div>
                         <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Ingresos Totales</p>
                         <h3 style={{ margin: '2px 0', fontSize: '22px', fontWeight: '800', color: '#10b981' }}>$2,000.00</h3>
@@ -58,7 +153,7 @@ export default function EstadoResultados() {
                 </div>
 
                 {/* Gastos Totales */}
-                <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="kpi-print-card" style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: '#ef4444', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BiTrendingDown size={24} /></div>
                     <div>
                         <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Gastos Totales</p>
@@ -68,7 +163,7 @@ export default function EstadoResultados() {
                 </div>
 
                 {/* Utilidad Neta */}
-                <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="kpi-print-card" style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: '#2563eb', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BiTrendingUp size={24} /></div>
                     <div>
                         <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Utilidad Neta</p>
@@ -79,10 +174,10 @@ export default function EstadoResultados() {
             </div>
 
             {/* SECCIÓN CENTRAL: TABLA DETALLE Y GRÁFICA */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.1fr', gap: '25px', alignItems: 'start' }}>
+            <div className="main-layout" style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.1fr', gap: '25px', alignItems: 'start' }}>
                 
                 {/* Bloque Izquierdo: Detalle del Estado de Resultados */}
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '24px' }}>
+                <div className="print-section" style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '24px' }}>
                     <h3 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>Detalle del Estado de Resultados</h3>
                     
                     {/* Sección INGRESOS */}
@@ -99,7 +194,7 @@ export default function EstadoResultados() {
                                 <td style={{ padding: '10px 4px', color: '#475569' }}><span style={{ color: '#94a3b8', marginRight: '8px' }}>4.1.01</span> Ventas de Botellones</td>
                                 <td style={{ textAlign: 'right', padding: '10px 4px', fontWeight: '600', color: '#1e293b' }}>$2,000.00</td>
                             </tr>
-                            <tr>
+                            <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
                                 <td style={{ padding: '10px 4px', color: '#475569' }}><span style={{ color: '#94a3b8', marginRight: '8px' }}>4.1.02</span> Otros Ingresos</td>
                                 <td style={{ textAlign: 'right', padding: '10px 4px', fontWeight: '600', color: '#94a3b8' }}>$0.00</td>
                             </tr>
@@ -146,35 +241,35 @@ export default function EstadoResultados() {
                         <span style={{ fontSize: '11px', fontWeight: '700', color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Utilidad Neta del Período</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
                             <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '900', color: '#16a34a' }}>$800.00</h2>
-                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#d1fae5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BiTrendingUp size={18} /></div>
+                            <div className="no-print" style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#d1fae5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BiTrendingUp size={18} /></div>
                         </div>
                     </div>
 
                 </div>
 
                 {/* Bloque Derecho: Gráfica e Indicadores */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     
                     {/* Caja de la Gráfica */}
-                    <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '20px' }}>
+                    <div className="chart-container" style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '20px' }}>
                         <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Comparación Ingresos vs Gastos</h4>
-                        <div style={{ width: '100%', height: '180px' }}>
+                        <div style={{ width: '100%', height: '220px' }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={dataGrafica} barSize={45}>
+                                <BarChart data={dataGrafica} barSize={45} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} domain={[0, 2500]} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} domain={[0, 'dataMax + 500']} />
                                     <Tooltip cursor={{ fill: '#f8fafc' }} />
-                                    <Bar dataKey="monto" fill="#10b981">
+                                    <Bar dataKey="monto">
                                         {dataGrafica.map((entry, index) => (
-                                            <rect key={`bar-${index}`} fill={entry.color} />
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                        {/* Leyendas personalizadas */}
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '10px', fontSize: '12px' }}>
+                        {/* Leyendas */}
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '15px', fontSize: '12px' }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}><span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: '#10b981' }}/> Ingresos</span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}><span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: '#ef4444' }}/> Gastos</span>
                         </div>
@@ -206,8 +301,8 @@ export default function EstadoResultados() {
                 </div>
             </div>
 
-            {/* Cuadro Informativo de Abajo */}
-            <div style={{ marginTop: '20px', padding: '12px 16px', backgroundColor: '#eff6ff', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '12px', color: '#1e40af', lineHeight: '1.5' }}>
+            {/* Cuadro Informativo Inferior */}
+            <div className="info-box" style={{ marginTop: '20px', padding: '12px 16px', backgroundColor: '#eff6ff', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '12px', color: '#1e40af', lineHeight: '1.5' }}>
                 <FiInfo size={16} style={{ marginTop: '2px', flexShrink: 0 }} />
                 <div>
                     <strong>Información:</strong> El Estado de Resultados muestra el desempeño financiero del negocio durante el período seleccionado, detallando los ingresos, gastos y la utilidad o pérdida neta.
@@ -215,7 +310,7 @@ export default function EstadoResultados() {
             </div>
             
             <p style={{ textAlign: 'center', fontSize: '11px', color: '#94a3b8', marginTop: '35px' }}>
-                © 2025 H2OManager · Sistema Administrativo Contable
+                © 2026 H2OManager · Sistema Administrativo Contable
             </p>
         </div>
     );
