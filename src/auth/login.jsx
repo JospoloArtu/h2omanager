@@ -28,6 +28,7 @@ export default function Login() {
             showCloseButton: true
         })
     }
+
     function success(ms){
         Swal.fire({
             icon: 'success',
@@ -49,11 +50,13 @@ export default function Login() {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         return re.test(String(email).toLowerCase())
     }
+
     function validatePassword(password) {
         // Al menos 8 caracteres, una letra mayúscula, una letra minúscula y un número
         const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/
         return re.test(password)
     }
+
     function validateForm() {
         if (!validateEmail(email)) {
             error('Por favor, ingresa un correo electrónico válido.')
@@ -67,7 +70,7 @@ export default function Login() {
     }
 
     const handleSubmit = (e)=>{
-        if (e) e.preventDefault();
+        if (e) e.preventDefault(); // Detiene el comportamiento por defecto de recargar la página
         if (!validateForm()) return
 
         setIsLoading(true)
@@ -80,94 +83,90 @@ export default function Login() {
 
     return (
         <div className="login-page">
-        <div className="login-card">
-            <div className="login-header">
-                <div className="brand-icon">
-                    <img src={Logo} alt="Logo H2O Manager" style={{height:'150px',marginBottom:'20px'}}/>
+            <div className="login-card">
+                <div className="login-header">
+                    <div className="brand-icon">
+                        <img src={Logo} alt="Logo H2O Manager" style={{height:'150px',marginBottom:'20px'}}/>
+                    </div>
+                    <p className="login-sub" style={{marginTop:'25px'}}>Ingresa tus credenciales para continuar</p>
                 </div>
-                <p className="login-sub" style={{marginTop:'25px'}}>Ingresa tus credenciales para continuar</p>
+
+                {/* ¡SOLUCIÓN AQUÍ! Capturamos el submit global del formulario */}
+                <form className="login-form" onSubmit={handleSubmit}>
+
+                    <div className="form-group">
+                        <label htmlFor="email">
+                            <FiMail className="label-icon" />
+                            Correo
+                        </label>
+                        <input
+                            id="email"
+                            type="email"
+                            maxLength={50}
+                            placeholder="ejemplo@correo.com"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            disabled={isLoading}
+                            autoComplete="email"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="password">
+                            <FiLock className="label-icon" />
+                            Contraseña
+                        </label>
+                        <div className="input-wrap">
+                            <input
+                                id="password"
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                disabled={isLoading}
+                                autoComplete="current-password"
+                                maxLength={15}
+                                // Eliminamos el onKeyDown manual, ya que el onSubmit del form maneja el "Enter" automáticamente
+                            />
+                            <button
+                                type="button"
+                                className="toggle-btn"
+                                onClick={() => setShowPass(!showPassword)}
+                                tabIndex={-1}
+                                style={{height:'35px', width:'35px', display:'flex', alignItems:'center', justifyContent:'center'}} // Ajusté un poco el tamaño para que se vea el icono completo
+                                aria-label="Mostrar contraseña"
+                            >
+                                {showPassword ? <FiEyeOff /> : <FiEye />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="form-meta">
+                        <a href="/" className="forgot" style={{ marginRight: '120px', padding: '5px 1px' }}>Volver </a>
+                        <a href="#" className="forgot" style={{ margin: '0 10px 0 0', padding: '5px 1px' }}>¿Olvidaste tu contraseña?</a>
+                    </div>
+
+                    {/* Al ser type="submit", el botón ejecutará el onSubmit del <form> sin conflictos de clicks duplicados */}
+                    <button type="submit" className="btn-submit" disabled={isLoading}>
+                        {isLoading ? (
+                            <>
+                                <span className="spinner" />
+                                Iniciando sesión...
+                            </>
+                        ) : (
+                            <>
+                                Ingresar al sistema
+                                <FiArrowRight className="btn-arrow" />
+                            </>
+                        )}
+                    </button>
+
+                </form>
+
+                <p className="login-footer">
+                    © 2025 H2OManager · <a href="#">Soporte técnico</a>
+                </p>
             </div>
-
-            {/* Form */}
-            <form className="login-form">
-
-            <div className="form-group">
-                <label htmlFor="email">
-                <FiMail className="label-icon" />
-                Correo
-                </label>
-                <input
-                id="email"
-                type="email"
-                maxLength={50}
-                placeholder="ejemplo@correo.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                disabled={isLoading}
-                autoComplete="email"
-                />
-            </div>
-
-            <div className="form-group">
-                <label htmlFor="password">
-                <FiLock className="label-icon" />
-                Contraseña
-                </label>
-                <div className="input-wrap">
-                <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    disabled={isLoading}
-                    autoComplete="current-password"
-                    maxLength={15}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            handleSubmit();
-                        }
-                    }}
-                />
-                <button
-                    type="button"
-                    className="toggle-btn"
-                    onClick={() => setShowPass(!showPassword)}
-                    tabIndex={-1}
-                    style={{height:'10px', width:'10px'}}
-                    aria-label="Mostrar contraseña"
-                >
-                    {showPassword ? <FiEyeOff /> : <FiEye />}
-                </button>
-                </div>
-            </div>
-
-            <div className="form-meta">
-                <a href="/" className="forgot" style={{ marginRight: '120px', padding: '5px 1px' }}>Volver </a>
-                <a href="#" className="forgot" style={{ margin: '0 10px 0 0', padding: '5px 1px' }}>¿Olvidaste tu contraseña?</a>
-            </div>
-
-            <button type="submit" onClick={handleSubmit} className="btn-submit" disabled={isLoading}>
-                {isLoading ? (
-                <>
-                    <span className="spinner" />
-                    Iniciando sesión...
-                </>
-                ) : (
-                <>
-                    Ingresar al sistema
-                    <FiArrowRight className="btn-arrow" />
-                </>
-                )}
-            </button>
-
-            </form>
-
-            <p className="login-footer">
-            © 2025 H2OManager · <a href="#">Soporte técnico</a>
-            </p>
-
-        </div>
         </div>
     )
 }
